@@ -26,7 +26,7 @@
     -webkit-tap-highlight-color: transparent;
   }
   body {
-    background-color: var(--color-background);
+    background-color: #1a1a1a !important; /* var(--color-background); */
     color: var(--color-foreground);
     @apply antialiased;
     overscroll-behavior-y: none;

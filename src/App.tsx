@@ -18,14 +18,14 @@ import { useAuth } from "@/context/AuthContext";
 const ProtectedRoute = ({ children, allowGuest = false }: { children: React.ReactNode, allowGuest?: boolean }) => {
   const { user, isLoading } = useAuth();
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center space-y-4">
-        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-        <p className="text-primary text-xs font-black uppercase tracking-widest animate-pulse">Iniciando Obra Go...</p>
-      </div>
-    );
-  }
+  // if (isLoading) {
+  //   return (
+  //     <div className="min-h-screen bg-background flex flex-col items-center justify-center space-y-4">
+  //       <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+  //       <p className="text-primary text-xs font-black uppercase tracking-widest animate-pulse">Iniciando Obra Go...</p>
+  //     </div>
+  //   );
+  // }
 
   // Si allowGuest es true, dejamos pasar aunque no haya user
   if (!user && !allowGuest) {
@@ -38,9 +38,11 @@ const ProtectedRoute = ({ children, allowGuest = false }: { children: React.Reac
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <Routes>
+    <>
+      <h1 style={{ color: 'white', zIndex: 9999, position: 'absolute', top: 0, left: 0, background: 'red', padding: '10px' }}>OBRA GO VIVA</h1>
+      <AuthProvider>
+        <Router>
+          <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
@@ -58,8 +60,9 @@ function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         <SupportWidget />
-      </Router>
-    </AuthProvider>
+        </Router>
+      </AuthProvider>
+    </>
   );
 }
 
