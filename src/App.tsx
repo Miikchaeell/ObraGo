@@ -16,7 +16,7 @@ import { SupportWidget } from "@/components/SupportWidget";
 import { useAuth } from "@/context/AuthContext";
 
 const ProtectedRoute = ({ children, allowGuest = false }: { children: React.ReactNode, allowGuest?: boolean }) => {
-  const { user, isLoading } = useAuth();
+  const { user } = useAuth();
 
   // if (isLoading) {
   //   return (
