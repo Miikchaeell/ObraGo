@@ -25,6 +25,49 @@ import { REGIONS_CHILE } from "@/data/chile";
 
 type UserPlan = 'free' | 'pro' | 'admin' | null;
 
+const AnalyzingProgressRing = () => {
+  const [progress, setProgress] = useState(1);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setProgress(prev => {
+        if (prev < 40) return prev + 2; 
+        if (prev < 75) return prev + 1;
+        if (prev < 90) return prev + 0.5;
+        return 90;
+      });
+    }, 400);
+    return () => clearInterval(timer);
+  }, []);
+
+  return (
+    <>
+      <div className="relative w-56 h-56 z-10">
+        <div className="absolute inset-0 rounded-full border-[12px] border-white/5" />
+        <motion.div 
+          className="absolute inset-0 rounded-full border-[12px] border-t-primary"
+          animate={{ rotate: 360 }}
+          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+        />
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className="text-6xl font-black text-white italic">{Math.floor(progress)}%</span>
+        </div>
+      </div>
+      <div className="text-center space-y-4">
+        <h3 className="text-2xl font-black tracking-tighter uppercase text-white">Escaneando Imagen</h3>
+        <motion.p 
+            animate={{ opacity: [0.4, 1, 0.4] }}
+            transition={{ duration: 2, repeat: Infinity }}
+            className="text-xs font-black text-primary/60 uppercase tracking-[0.3em] mb-8"
+          >
+            Analizando Capas Técnicas... {Math.floor(progress)}%
+          </motion.p>
+          <AdSenseSlot id="scanner-loading" className="w-full max-w-sm mt-4" />
+      </div>
+    </>
+  );
+};
+
 export default function Scanner() {
   const navigate = useNavigate();
   const { user, plan: rawPlan } = useAuth();
@@ -37,7 +80,6 @@ export default function Scanner() {
   const [projectContext, setProjectContext] = useState<{ id: string; name?: string; is_paid?: boolean } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [analyzingProgress, setAnalyzingProgress] = useState(0);
   const [selectedSystemId, setSelectedSystemId] = useState<string | null>(null);
   const [editedDims, setEditedDims] = useState({ largo: 0, ancho: 0, espesor: 0.1, alto: 2.4 });
   const [unitMode, setUnitMode] = useState<'m' | 'cm'>('m');
@@ -72,7 +114,6 @@ export default function Scanner() {
     if (!file) return;
 
     setIsAnalyzing(true);
-    setAnalyzingProgress(1);
     setFallbackNotice(null);
     setLocalLargo("");
     setLocalAncho("");
@@ -84,16 +125,6 @@ export default function Scanner() {
     const url = URL.createObjectURL(file);
     setPreviewImage(url);
     setStep('analyzing');
-    
-    // Lento ascenso visual (aprox 20-25 segundos para llegar al 90%)
-    const timer = setInterval(() => {
-      setAnalyzingProgress(prev => {
-        if (prev < 40) return prev + 2; 
-        if (prev < 75) return prev + 1;
-        if (prev < 90) return prev + 0.5;
-        return 90; // se queda en 90 hasta que responde
-      });
-    }, 400);
 
     try {
       const formData = new FormData();
@@ -118,7 +149,6 @@ export default function Scanner() {
       console.log('IA Result:', result);
       
       if (result.success) {
-        setAnalyzingProgress(100);
         setSelectedSystemId(result.data?.sistema_id || "radier_estandar");
         
         const dim = result.data?.dimensiones || {};
@@ -149,7 +179,6 @@ export default function Scanner() {
       console.error('Error in handleImageChange:', err);
       alert("Error analizando la imagen. Intenta con otra toma.");
     } finally {
-      clearInterval(timer);
       setIsAnalyzing(false);
     }
   };
@@ -431,29 +460,7 @@ export default function Scanner() {
                 <img src={previewImage} className="w-full h-full object-cover" alt="Analizando..." />
               </div>
             )}
-            
-            <div className="relative w-56 h-56 z-10">
-              <div className="absolute inset-0 rounded-full border-[12px] border-white/5" />
-              <motion.div 
-                className="absolute inset-0 rounded-full border-[12px] border-t-primary"
-                animate={{ rotate: 360 }}
-                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-              />
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-6xl font-black text-white italic">{Math.floor(analyzingProgress)}%</span>
-              </div>
-            </div>
-            <div className="text-center space-y-4">
-              <h3 className="text-2xl font-black tracking-tighter uppercase text-white">Escaneando Imagen</h3>
-              <motion.p 
-                  animate={{ opacity: [0.4, 1, 0.4] }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                  className="text-xs font-black text-primary/60 uppercase tracking-[0.3em] mb-8"
-                >
-                  Analizando Capas Técnicas... {Math.floor(analyzingProgress)}%
-                </motion.p>
-                <AdSenseSlot id="scanner-loading" className="w-full max-w-sm mt-4" />
-            </div>
+            <AnalyzingProgressRing />
           </div>
         )}
 
