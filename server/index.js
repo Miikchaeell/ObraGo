@@ -762,7 +762,14 @@ app.post('/api/analyze', authenticateToken, upload.single('image'), async (req, 
       res.json({ success: true, data: parsedData, imageUrl: `/uploads/${req.file.filename}` });
 
     } catch (innerError) {
-      console.error("DETALLE ERROR OPENAI:", innerError);
+      console.error(`💥 [ID:${requestId}] DETALLE ERROR OPENAI:`);
+      if (innerError.response) {
+        console.error(" STATUS:", innerError.response.status);
+        console.error(" DATA:", JSON.stringify(innerError.response.data));
+      } else {
+        console.error(" CODE:", innerError.code);
+        console.error(" MESSAGE:", innerError.message);
+      }
       
       // Fallback Inteligente Obra Go
       const fallbackData = {

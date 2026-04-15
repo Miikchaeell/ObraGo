@@ -85,9 +85,15 @@ export default function Scanner() {
     setPreviewImage(url);
     setStep('analyzing');
     
+    // Lento ascenso visual (aprox 20-25 segundos para llegar al 90%)
     const timer = setInterval(() => {
-      setAnalyzingProgress(prev => (prev < 90 ? prev + 3 : prev));
-    }, 100);
+      setAnalyzingProgress(prev => {
+        if (prev < 40) return prev + 2; 
+        if (prev < 75) return prev + 1;
+        if (prev < 90) return prev + 0.5;
+        return 90; // se queda en 90 hasta que responde
+      });
+    }, 400);
 
     try {
       const formData = new FormData();
@@ -96,10 +102,13 @@ export default function Scanner() {
       const API_URL = import.meta.env.VITE_API_URL || "https://obrascan-backend-v3.onrender.com";
       
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 segundos de timeout
+      const timeoutId = setTimeout(() => controller.abort(), 90000); // 90 segundos de timeout extendido
       
       const response = await fetch(`${API_URL}/api/analyze`, {
         method: 'POST',
+        headers: {
+          'Connection': 'keep-alive'
+        },
         body: formData,
         signal: controller.signal
       });
@@ -431,7 +440,7 @@ export default function Scanner() {
                 transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
               />
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-6xl font-black text-white italic">{analyzingProgress}%</span>
+                <span className="text-6xl font-black text-white italic">{Math.floor(analyzingProgress)}%</span>
               </div>
             </div>
             <div className="text-center space-y-4">
@@ -441,7 +450,7 @@ export default function Scanner() {
                   transition={{ duration: 2, repeat: Infinity }}
                   className="text-xs font-black text-primary/60 uppercase tracking-[0.3em] mb-8"
                 >
-                  Analizando Capas Técnicas... {analyzingProgress}%
+                  Analizando Capas Técnicas... {Math.floor(analyzingProgress)}%
                 </motion.p>
                 <AdSenseSlot id="scanner-loading" className="w-full max-w-sm mt-4" />
             </div>
