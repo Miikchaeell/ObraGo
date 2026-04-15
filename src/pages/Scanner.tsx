@@ -106,16 +106,27 @@ export default function Scanner() {
       
       clearTimeout(timeoutId);
       const result = await response.json();
+      console.log('IA Result:', result);
       
       if (result.success) {
         setAnalyzingProgress(100);
-        setSelectedSystemId(result.data.sistema_id || "radier_estandar");
-        setEditedDims(result.data.dimensiones);
-        setLocalLargo(result.data.dimensiones.largo.toString());
-        setLocalAncho(result.data.dimensiones.ancho.toString());
-        setLocalAlto(result.data.dimensiones.alto.toString());
-        setLocalEspesor(result.data.dimensiones.espesor.toString());
-        if (result.data.is_fallback) setFallbackNotice(result.data.observaciones);
+        setSelectedSystemId(result.data?.sistema_id || "radier_estandar");
+        
+        const dim = result.data?.dimensiones || {};
+        const safeDims = {
+          largo: dim.largo || 0,
+          ancho: dim.ancho || 0,
+          alto: dim.alto || 0,
+          espesor: dim.espesor || 0.1
+        };
+        
+        setEditedDims(safeDims);
+        setLocalLargo(safeDims.largo.toString());
+        setLocalAncho(safeDims.ancho.toString());
+        setLocalAlto(safeDims.alto.toString());
+        setLocalEspesor(safeDims.espesor.toString());
+        
+        if (result.data?.is_fallback) setFallbackNotice(result.data.observaciones);
         
         // Registrar escaneo de invitado
         if (!user) {
@@ -123,9 +134,10 @@ export default function Scanner() {
           localStorage.setItem('obra_go_guest_scans', (guestScans + 1).toString());
         }
         
-        setTimeout(() => setStep('confirm'), 500);
+        setStep('confirm');
       }
-    } catch {
+    } catch (err) {
+      console.error('Error in handleImageChange:', err);
       alert("Error analizando la imagen. Intenta con otra toma.");
     } finally {
       clearInterval(timer);
