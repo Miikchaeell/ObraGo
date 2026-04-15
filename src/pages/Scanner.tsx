@@ -93,11 +93,18 @@ export default function Scanner() {
       const formData = new FormData();
       formData.append('image', file);
       
-      const API_URL = import.meta.env.VITE_API_URL || "";
+      const API_URL = import.meta.env.VITE_API_URL || "https://obrascan-backend-v3.onrender.com";
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 segundos de timeout
+      
       const response = await fetch(`${API_URL}/api/analyze`, {
         method: 'POST',
         body: formData,
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
       const result = await response.json();
       
       if (result.success) {
@@ -191,7 +198,7 @@ export default function Scanner() {
     setIsProcessingPayment(true);
     try {
       const token = localStorage.getItem("token");
-      const API_URL = import.meta.env.VITE_API_URL || "";
+      const API_URL = import.meta.env.VITE_API_URL || "https://obrascan-backend-v3.onrender.com";
       const res = await fetch(`${API_URL}/api/checkout/pdf`, {
         method: 'POST',
         headers: { 

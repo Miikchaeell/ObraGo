@@ -228,6 +228,7 @@ if (isProduction) {
 // Configuración de CORS Restrictiva para app.obrago.cl
 const allowedOrigins = [
   'https://app.obrago.cl',
+  'https://obrascan.vercel.app', // Vercel Production
   'http://localhost:5173', // Para desarrollo local
   'http://127.0.0.1:5173'
 ];
