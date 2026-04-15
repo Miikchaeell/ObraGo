@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageSquare, X, Send, Bot, Loader2 } from 'lucide-react';
+import { Button } from './ui/button';
 
 // [v1.0] Autonomous Support Widget - Obra Go Chile
 // Integración con Ingeniero de Soporte IA (GPT-4o)

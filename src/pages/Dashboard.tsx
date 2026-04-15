@@ -10,7 +10,8 @@ import {
   LogOut,
   User as UserIcon,
   FolderOpen,
-  Loader2
+  Loader2,
+  MessageCircle
 } from "lucide-react";
 import { AdSenseSlot } from "@/components/AdSenseSlot";
 import { Button } from "@/components/ui/button";
@@ -196,7 +197,7 @@ export default function Dashboard() {
             className="w-14 h-14 rounded-full bg-[#25D366] hover:bg-[#128C7E] shadow-2xl flex items-center justify-center group p-0"
             aria-label="Soporte WhatsApp"
           >
-            <Lucide.MessageCircle className="w-7 h-7 text-white" />
+            <MessageCircle className="w-7 h-7 text-white" />
             <motion.span 
               initial={{ opacity: 0, x: 10 }}
               whileHover={{ opacity: 1, x: 0 }}

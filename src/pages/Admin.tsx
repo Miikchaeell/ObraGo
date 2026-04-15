@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Users, 
@@ -106,7 +106,7 @@ export default function Admin() {
           </div>
 
           <div className="space-y-4">
-            {stats?.heatmap?.length > 0 ? stats.heatmap.map((item: { commune: string; activity: number }, idx: number) => (
+            {stats && stats.heatmap && stats.heatmap.length > 0 ? stats.heatmap.map((item: { commune: string; activity: number }, idx: number) => (
               <div key={item.commune} className="space-y-1">
                 <div className="flex justify-between text-[10px] font-black uppercase tracking-widest">
                   <span className={idx === 0 ? "text-primary" : "text-slate-400"}>{item.commune}</span>
@@ -115,7 +115,7 @@ export default function Admin() {
                 <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
                   <motion.div 
                     initial={{ width: 0 }}
-                    animate={{ width: `${(item.activity / stats.heatmap[0].activity) * 100}%` }}
+                    animate={{ width: `${(item.activity / (stats?.heatmap?.[0]?.activity || 1)) * 100}%` }}
                     className={`h-full ${idx === 0 ? "bg-primary" : "bg-slate-700"}`}
                   />
                 </div>
@@ -134,7 +134,7 @@ export default function Admin() {
                 <p className="text-[10px] font-black uppercase opacity-60">Proyección Mensual (Sandbox)</p>
               </div>
               <div className="text-right">
-                <p className="text-3xl font-black italic tracking-tighter">${(stats?.totalSales * 2990).toLocaleString('es-CL')}</p>
+                <p className="text-3xl font-black italic tracking-tighter">${((stats?.totalSales || 0) * 2990).toLocaleString('es-CL')}</p>
                 <p className="text-[10px] font-black uppercase opacity-40">Ingreso Bruto CLP</p>
               </div>
            </div>
