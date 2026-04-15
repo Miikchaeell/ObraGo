@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: #0f1115;
+  --color-foreground: #ffffff;
+  --color-card: #12141a;
+  --color-popover: #12141a;
+  --color-primary: #e1ff00;
+  --color-primary-foreground: #000;
+  --color-secondary: #1c1f26;
+  --color-secondary-foreground: #ffffff;
+  --color-muted: #1c1f26;
+  --color-muted-foreground: #64748b;
+  --color-accent: #e1ff00;
+  --color-accent-foreground: #000;
+  --color-destructive: #ef4444;
+  --color-destructive-foreground: #f8fafc;
+  --color-border: #2a2a35;
+  --color-input: #2a2a35;
+  --color-ring: #e1ff00;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    @apply antialiased;
+    overscroll-behavior-y: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  
+  /* Habilitar selección solo en inputs y áreas específicas */
+  input, textarea, [contenteditable="true"] {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+}
+
+@layer utilities {
+  .bg-grid-pattern {
+    background-image: radial-gradient(circle, #1a1a1a 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+}
