@@ -24,23 +24,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     // 1. Verificar sesión inicial
     const checkUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        setUser({
-          id: session.user.id,
-          email: session.user.email || ''
-        });
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        if (error) {
+          console.warn("Supabase Auth Error:", error.message);
+        }
         
-        // Fetch Real Plan from Supabase
-        const { data: sub } = await supabase
-          .from('subscriptions')
-          .select('plan_type')
-          .eq('user_id', session.user.id)
-          .single();
-        
-        setPlan(sub?.plan_type || 'free'); 
+        const session = data?.session;
+        if (session?.user) {
+          setUser({
+            id: session.user.id,
+            email: session.user.email || ''
+          });
+          
+          try {
+            // Fetch Real Plan from Supabase
+            const { data: sub } = await supabase
+              .from('subscriptions')
+              .select('plan_type')
+              .eq('user_id', session.user.id)
+              .single();
+            
+            setPlan(sub?.plan_type || 'free');
+          } catch (dbError) {
+            console.warn("Could not fetch plan:", dbError);
+            setPlan('free');
+          }
+        }
+      } catch (err) {
+        console.warn("Could not connect to Supabase. Loading guest mode.", err);
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     };
 
     checkUser();
