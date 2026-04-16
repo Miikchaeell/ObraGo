@@ -41,6 +41,22 @@ export const SupportWidget: React.FC<SupportWidgetProps> = ({ metadata }) => {
 
   const [messages, setMessages] = useState<{ role: 'user' | 'bot'; content: string }[]>([]);
 
+  // Lógica de Consultoría Offline (Heurística Experta)
+  const getOfflineReply = (userMsg: string): string => {
+    const msg = userMsg.toLowerCase();
+    const { resistencia, secado } = metadata?.dosage || { resistencia: 'G-25', secado: 'Estándar' };
+
+    if (msg.includes('sí') || msg.includes('recomienda') || msg.includes('consejo') || msg.includes('opin')) {
+      return `¡Excelente! Para un ${resistencia} ${secado}, mi consejo es que cuides mucho el curado; al ser de alta resistencia inicial, genera calor rápido. ¿Ya tienes listo el vibrador de inmersión? Recuerda que el PDF de $2.990 tiene la dosificación exacta para que no pierdas material.`;
+    }
+
+    if (msg.includes('pdf') || msg.includes('descargar') || msg.includes('pagar') || msg.includes('cuánto') || msg.includes('valor')) {
+      return `El PDF profesional cuesta solo $2.990. Te entrega el detalle de materiales, la cubicación exacta y la guía de mezclas. Es tu respaldo técnico para la obra. ¿Te mando el link de pago?`;
+    }
+
+    return `Entiendo perfectamente. Como tu socio en esta obra de ${metadata?.category || 'ingeniería'}, mi objetivo es que no pierdas presupuesto por errores de cubicación. ¿Quieres que revisemos la dosificación de ${resistencia} o prefieres descargar el reporte completo ahora?`;
+  };
+
   // Inicializar chat con identidad pro
   useEffect(() => {
     if (messages.length === 0) {
@@ -102,7 +118,8 @@ export const SupportWidget: React.FC<SupportWidgetProps> = ({ metadata }) => {
       const data = await res.json();
       setMessages(prev => [...prev, { role: 'bot', content: data.reply }]);
     } catch {
-      setMessages(prev => [...prev, { role: 'bot', content: 'Lo siento, tuve un problema de conexión. Estoy validando los rendimientos NCh de tu proyecto para asegurar que el reporte sea exacto. Dame un segundo o contáctanos por WhatsApp.' }]);
+      // MODO OFFLINE: Heurística Directa si la API falla
+      setMessages(prev => [...prev, { role: 'bot', content: getOfflineReply(userMessage) }]);
     } finally {
       setIsLoading(false);
     }
@@ -153,7 +170,7 @@ export const SupportWidget: React.FC<SupportWidgetProps> = ({ metadata }) => {
                 <div className="flex justify-start">
                   <div className="bg-white/5 p-4 rounded-2xl rounded-tl-none flex items-center gap-2">
                     <Loader2 className="w-4 h-4 text-primary animate-spin" />
-                    <span className="text-[9px] font-black uppercase text-primary/60 tracking-widest">Validando rendimientos NCh...</span>
+                    <span className="text-[9px] font-black uppercase text-primary/60 tracking-widest">Analizando rendimientos...</span>
                   </div>
                 </div>
               )}
