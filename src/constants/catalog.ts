@@ -32,10 +32,13 @@ export const MATERIALS_CATALOG: Material[] = [
   // HORMIGONES Y ALBAÑILERÍA
   { id: "horm_h20", name: "Hormigón Premezclado H20", category: "Hormigones", unit: "m3", coverage: 1.0, refPrice: 125000, tags: ["radier", "fundacion"] },
   { id: "horm_h25", name: "Hormigón Premezclado H25 (Bomba)", category: "Hormigones", unit: "m3", coverage: 1.05, refPrice: 138000, tags: ["losa", "viga", "pilar"] },
+  { id: "horm_h30", name: "Hormigón Premezclado H30", category: "Hormigones", unit: "m3", coverage: 1.0, refPrice: 152000, tags: ["estructura", "vivienda"] },
   { id: "lad_fiscal", name: "Ladrillo Fiscal 29x14x7cm", category: "Hormigones", unit: "un", coverage: 38, refPrice: 480, tags: ["albañilería", "muro"] },
   { id: "lad_princesa", name: "Ladrillo Princesa (Gran Formato)", category: "Hormigones", unit: "un", coverage: 42, refPrice: 650, tags: ["albañilería", "revestimiento"] },
   { id: "bloque_horm", name: "Bloque de Hormigón 19x19x39cm", category: "Hormigones", unit: "un", coverage: 12.5, refPrice: 1200, tags: ["muro", "perimetral"] },
-  { id: "fierro_10", name: "Fierro Estriado 10mm (Tira 6mt)", category: "Perfiles", unit: "un", coverage: 0.45, refPrice: 8500, tags: ["estructura", "columna"] },
+  { id: "fierro_8", name: "Fierro Estriado 8mm (Tira 6mt)", category: "Perfiles", unit: "un", coverage: 0.55, refPrice: 6200, tags: ["estructura", "muro"] },
+  { id: "fierro_10", name: "Fierro Estriado 10mm (Tira 6mt)", category: "Perfiles", unit: "un", coverage: 0.50, refPrice: 8500, tags: ["estructura", "columna"] },
+  { id: "fierro_12", name: "Fierro Estriado 12mm (Tira 6mt)", category: "Perfiles", unit: "un", coverage: 0.45, refPrice: 11200, tags: ["estructura", "cimiento"] },
   { id: "pandereta", name: "Placa Pandereta 2.0x0.5m", category: "Hormigones", unit: "un", coverage: 1.0, refPrice: 15000, tags: ["cierre", "pandereta"] },
 
   // TERMINACIONES
@@ -49,6 +52,8 @@ export const MATERIALS_CATALOG: Material[] = [
   { id: "mov_tierra", name: "Movimiento de Tierra (Excavación)", category: "Otros", unit: "m3", coverage: 1.0, refPrice: 18500, tags: ["terreno", "excavacion"] },
   { id: "cem_saco", name: "Cemento Especial (Saco 42.5kg)", category: "Hormigones", unit: "sacos", coverage: 0.15, refPrice: 9200, tags: ["insumo", "mezcla"] },
   { id: "malla_acma_c92", name: "Malla ACMA C-92 (2.6x5m)", category: "Hormigones", unit: "un", coverage: 0.08, refPrice: 38500, tags: ["radier", "pavimento"] },
+  { id: "malla_acma_c139", name: "Malla ACMA C-139 (2.6x5m)", category: "Hormigones", unit: "un", coverage: 0.08, refPrice: 52000, tags: ["radier", "losa"] },
+  { id: "malla_acma_c188", name: "Malla ACMA C-188 (2.6x5m)", category: "Hormigones", unit: "un", coverage: 0.08, refPrice: 68500, tags: ["radier", "comercial"] },
 ];
 
 export const SYSTEMS_CATALOG: ConstructionSystem[] = [

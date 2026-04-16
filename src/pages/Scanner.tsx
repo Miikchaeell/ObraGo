@@ -8,9 +8,11 @@ import {
   Download,
   Loader2,
   Settings2,
-  Ruler,
-  TrendingUp,
-  Boxes
+  Boxes,
+  Zap,
+  CheckCircle2,
+  AlertCircle,
+  FileText
 } from "lucide-react";
 import { AdSenseSlot } from "@/components/AdSenseSlot";
 import { Button } from "@/components/ui/button";
@@ -18,13 +20,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import { jsPDF } from "jspdf";
 import { 
   calculateMaterialQuantities, 
-  calculateTotalCost 
+  calculateTotalCost
 } from "@/services/calculator";
+import type { DosageSelection } from "@/services/calculator";
 import { SYSTEMS_CATALOG } from "@/constants/catalog";
 import { useAuth } from "@/context/AuthContext";
 import { REGIONS_CHILE } from "@/data/chile";
-
-
 
 const compressImage = (file: File, maxWidth = 1024, maxHeight = 1024): Promise<Blob> => {
   return new Promise((resolve, reject) => {
@@ -57,7 +58,7 @@ const compressImage = (file: File, maxWidth = 1024, maxHeight = 1024): Promise<B
         canvas.toBlob((blob) => {
           if (blob) resolve(blob);
           else reject(new Error('Canvas to Blob failed'));
-        }, 'image/jpeg', 0.85); // 85% calidad
+        }, 'image/jpeg', 0.85); 
       };
       img.onerror = reject;
     };
@@ -100,30 +101,31 @@ export default function Scanner() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  const [step, setStep] = useState<'config' | 'upload' | 'analyzing' | 'confirm'>('config');
+  const [step, setStep] = useState<'config' | 'upload' | 'analyzing' | 'dosage_config' | 'confirm'>('config');
   const [isAnalysisComplete, setIsAnalysisComplete] = useState(false);
   const [showForcedButton, setShowForcedButton] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // NUEVOS ESTADOS V3.0
+  // ESTADOS V3.0 ELITE
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [selectedSystemId, setSelectedSystemId] = useState<string>("");
-  const [masterMeasure, setMasterMeasure] = useState<string>(""); // Medida de ancla
-  const [wasteMargin, setWasteMargin] = useState<number>(0.05); // 5%, 10%, 15%
+  const [wasteMargin] = useState<number>(0.05); 
+  const [tempDims, setTempDims] = useState({ largo: "", ancho: "", espesor: "" });
+  const [editedDims, setEditedDims] = useState({ largo: 0, ancho: 0, espesor: 0, alto: 2.4 });
   
-  const [editedDims, setEditedDims] = useState({ largo: 0, ancho: 0, espesor: 0.1, alto: 2.4 });
-  const [unitMode, setUnitMode] = useState<'m' | 'cm'>('m');
+  // Dosage Options
+  const [dosage, setDosage] = useState<DosageSelection>({
+    resistencia: "H-20",
+    secado: "Estándar",
+    armaduraTipo: "ACMA",
+    armaduraDetalle: "malla_acma_c92"
+  });
+
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [fallbackNotice, setFallbackNotice] = useState<string | null>(null);
-
-  const [localLargo, setLocalLargo] = useState("");
-  const [localAncho, setLocalAncho] = useState("");
-  const [localAlto, setLocalAlto] = useState("");
-  const [localEspesor, setLocalEspesor] = useState("");
   const [projectNameInput, setProjectNameInput] = useState("");
-  
   const [selectedRegion, setSelectedRegion] = useState("");
   const [selectedCommune, setSelectedCommune] = useState("");
 
@@ -141,33 +143,35 @@ export default function Scanner() {
     }
   }, [user]);
 
+  const validatePreConfig = () => {
+    return (
+        projectNameInput.trim() !== "" &&
+        selectedSystemId !== "" &&
+        selectedCommune !== "" &&
+        parseFloat(tempDims.largo) > 0 &&
+        parseFloat(tempDims.ancho) > 0 &&
+        parseFloat(tempDims.espesor) > 0
+    );
+  };
+
   const triggerSensorFallback = (isForcedManually = false) => {
     setFallbackNotice(isForcedManually ? "Análisis forzado manual mediante sensores." : "Análisis obtenido mediante sensores volumétricos locales.");
     
-    // Aplicamos Medida Maestra al fallback
-    const referenceLength = parseFloat(masterMeasure.replace(',', '.')) || 6.2;
-    
-    const safeDims = { 
-      largo: referenceLength, 
-      ancho: 3.5, 
-      espesor: 0.12, 
-      alto: 2.4 
-    };
-    
-    setEditedDims(safeDims);
-    setLocalLargo(safeDims.largo.toString());
-    setLocalAncho(safeDims.ancho.toString());
-    setLocalAlto(safeDims.alto.toString());
-    setLocalEspesor(safeDims.espesor.toString());
+    setEditedDims({
+        largo: parseFloat(tempDims.largo),
+        ancho: parseFloat(tempDims.ancho),
+        espesor: parseFloat(tempDims.espesor) / 100, // cm a mt
+        alto: 2.4
+    });
+
     setIsAnalysisComplete(true);
-    setStep('confirm');
+    setStep('dosage_config');
   };
 
   const handleImageChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Analizando...
     setIsAnalysisComplete(false);
     setShowForcedButton(false);
     setFallbackNotice(null);
@@ -209,38 +213,13 @@ export default function Scanner() {
       if (result.success) {
         setIsAnalysisComplete(true);
         
-        const dim = result.data?.dimensiones || {};
-        
-        // Lógica de Escalamiento Proporcional con Medida Maestra
-        let finalLargo = dim.largo || 5;
-        let finalAncho = dim.ancho || 2;
-        let finalAlto = dim.alto || 2.4;
-        let finalEspesor = dim.espesor || 0.12;
-
-        if (masterMeasure) {
-            const anchor = parseFloat(masterMeasure.replace(',', '.'));
-            if (anchor > 0) {
-                const ratio = anchor / finalLargo;
-                finalLargo = anchor;
-                finalAncho = finalAncho * ratio;
-                finalAlto = finalAlto * ratio;
-                // El espesor suele ser fijo según partida, pero lo escalamos si es estructural
-                if (finalEspesor < 0.05) finalEspesor = finalEspesor * ratio;
-            }
-        }
-
-        const safeDims = {
-          largo: finalLargo,
-          ancho: finalAncho,
-          alto: finalAlto,
-          espesor: finalEspesor
-        };
-        
-        setEditedDims(safeDims);
-        setLocalLargo(safeDims.largo.toFixed(2));
-        setLocalAncho(safeDims.ancho.toFixed(2));
-        setLocalAlto(safeDims.alto.toFixed(2));
-        setLocalEspesor(safeDims.espesor.toFixed(2));
+        // Priorizar inputs manuales del constructor real
+        setEditedDims({
+            largo: parseFloat(tempDims.largo),
+            ancho: parseFloat(tempDims.ancho),
+            espesor: parseFloat(tempDims.espesor) / 100,
+            alto: 2.4
+        });
         
         if (result.data?.is_fallback) setFallbackNotice(result.data.observaciones);
         
@@ -249,7 +228,7 @@ export default function Scanner() {
           localStorage.setItem('obra_go_guest_scans', (guestScans + 1).toString());
         }
         
-        setStep('confirm');
+        setStep('dosage_config');
       } else {
         triggerSensorFallback();
       }
@@ -259,17 +238,7 @@ export default function Scanner() {
     }
   };
 
-  const handleLocalInputChange = (dim: 'largo' | 'ancho' | 'alto' | 'espesor', val: string) => {
-    const num = parseFloat(val.replace(',', '.')) || 0;
-    const inMeters = unitMode === 'cm' ? num / 100 : num;
-    setEditedDims(p => ({ ...p, [dim]: inMeters }));
-    if (dim === 'largo') setLocalLargo(val);
-    if (dim === 'ancho') setLocalAncho(val);
-    if (dim === 'alto') setLocalAlto(val);
-    if (dim === 'espesor') setLocalEspesor(val);
-  };
-
-  const currentMaterials = calculateMaterialQuantities(selectedSystemId, editedDims, prices, wasteMargin);
+  const currentMaterials = calculateMaterialQuantities(selectedSystemId, editedDims, prices, wasteMargin, dosage);
   const currentCost = calculateTotalCost(selectedSystemId, editedDims, currentMaterials);
 
   const handleExportPDF = async () => {
@@ -277,12 +246,12 @@ export default function Scanner() {
       setShowRegisterModal(true);
       return;
     }
-    exportPDF();
+    // El muro de pago solo aparece aquí
+    setShowPaywall(true); 
   };
 
   const exportPDF = () => {
     const doc = new jsPDF();
-    // Identidad Tesla Dark en PDF
     doc.setFillColor(15, 17, 21);
     doc.rect(0, 0, 210, 50, 'F');
     doc.setTextColor(225, 255, 0); 
@@ -291,18 +260,18 @@ export default function Scanner() {
     doc.text("OBRA GO", 105, 30, { align: "center" });
     doc.setFontSize(10);
     doc.setTextColor(255, 255, 255);
-    doc.text("INGENIERÍA PROFESIONAL Y CUBICACIÓN AEC", 105, 42, { align: "center" });
+    doc.text("INGENIERÍA ELITE Y CUBICACIÓN PROFESIONAL", 105, 42, { align: "center" });
 
     doc.setTextColor(0,0,0);
     doc.setFontSize(12);
     let y = 65;
-    doc.text(`PROYECTO: ${projectNameInput || "Sin Nombre"}`, 15, y); y += 8;
+    doc.text(`PROYECTO: ${projectNameInput}`, 15, y); y += 8;
     doc.text(`PARTIDA: ${SYSTEMS_CATALOG.find(s => s.id === selectedSystemId)?.name}`, 15, y); y += 8;
-    doc.text(`UBICACIÓN: ${selectedCommune}, ${selectedRegion}`, 15, y); y += 8;
-    doc.text(`MARGEN DE PÉRDIDA: ${wasteMargin * 100}%`, 15, y); y += 12;
+    doc.text(`ESPECIFICACIÓN: ${dosage.resistencia} / ${dosage.secado}`, 15, y); y += 8;
+    doc.text(`ARMADURA: ${dosage.armaduraTipo === 'ACMA' ? 'Malla ACMA' : 'Enfierradura Tradicional'}`, 15, y); y += 12;
 
     doc.setFont("helvetica", "bold");
-    doc.text("DESGLOSE DE MATERIALES (Incl. Pérdida):", 15, y); y += 10;
+    doc.text("DESGLOSE TÉCNICO DE MATERIALES:", 15, y); y += 10;
     doc.setFont("helvetica", "normal");
     
     currentMaterials.forEach(m => {
@@ -312,11 +281,11 @@ export default function Scanner() {
       y += 7;
     });
 
-    y += 10;
-    doc.setFontSize(14);
-    doc.text(`TOTAL ESTIMADO: $${currentCost.total.toLocaleString('es-CL')}`, 15, y);
+    y += 15;
+    doc.setFontSize(16);
+    doc.text(`INVERSIÓN TOTAL ESTIMADA: $${(currentCost.total * 1.19).toLocaleString('es-CL')}`, 15, y);
 
-    doc.save(`ObraGo_${projectNameInput || 'Reporte'}.pdf`);
+    doc.save(`ObraGo_Elite_${projectNameInput}.pdf`);
   };
 
   return (
@@ -326,7 +295,7 @@ export default function Scanner() {
           <ChevronLeft className="w-6 h-6" />
         </button>
         <div className="flex items-center gap-3">
-          <h1 className="text-sm font-black tracking-widest uppercase text-primary">Obra Go <span className="text-white/30 ml-1">V3.0</span></h1>
+          <h1 className="text-sm font-black tracking-widest uppercase text-primary italic">Obra Go <span className="text-white ml-1">Elite</span></h1>
         </div>
         <button onClick={() => setStep('config')} className="p-2 rounded-xl text-white/50 hover:bg-white/10">
           <RotateCcw className="w-5 h-5" />
@@ -337,8 +306,10 @@ export default function Scanner() {
         {step === 'config' && (
           <div className="py-8 space-y-8 animate-in fade-in duration-500">
             <header className="space-y-2">
-                <h2 className="text-4xl font-black tracking-tighter uppercase italic leading-none">Configuración<br /><span className="text-primary text-5xl">De Partida</span></h2>
-                <p className="text-xs font-bold text-white/40 uppercase tracking-widest">Ingeniería Autónoma AEC</p>
+                <h2 className="text-4xl font-black tracking-tighter uppercase italic leading-none">Input De<br /><span className="text-primary text-5xl">Ingeniería</span></h2>
+                <p className="text-xs font-bold text-white/40 uppercase tracking-widest flex items-center gap-2">
+                    <Zap className="w-3 h-3 text-primary" /> Configuración Obligatoria Pre-Cámara
+                </p>
             </header>
 
             <div className="space-y-6">
@@ -353,77 +324,81 @@ export default function Scanner() {
                         className="w-full bg-white/5 border border-white/10 p-5 rounded-2xl font-black text-white outline-none focus:border-primary/50"
                     />
                 </div>
-                {/* Categoría */}
-                <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-white/40 flex items-center gap-2"><Boxes className="w-3 h-3"/> Categoría de Obra</label>
-                    <div className="grid grid-cols-1 gap-2">
-                        {categories.map(cat => (
-                            <button
-                                key={cat}
-                                onClick={() => { setSelectedCategory(cat); setSelectedSystemId(""); }}
-                                className={`p-4 rounded-2xl border transition-all text-left font-bold uppercase text-sm ${selectedCategory === cat ? 'bg-primary border-primary text-black' : 'bg-white/5 border-white/10 text-white/60 hover:border-white/20'}`}
+
+                {/* Categoría & Partida */}
+                <div className="grid grid-cols-1 gap-4">
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase text-white/40"><Boxes className="w-3 h-3 inline mr-2"/> Categoría</label>
+                        <select 
+                            value={selectedCategory} 
+                            onChange={(e) => { setSelectedCategory(e.target.value); setSelectedSystemId(""); }}
+                            className="w-full bg-white/5 border border-white/10 p-4 rounded-xl font-bold appearance-none"
+                        >
+                            <option value="">Selecciona Categoría...</option>
+                            {categories.map(cat => <option key={cat} value={cat} className="bg-slate-900">{cat}</option>)}
+                        </select>
+                    </div>
+                    {selectedCategory && (
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase text-white/40"><Settings2 className="w-3 h-3 inline mr-2"/> Partida</label>
+                            <select 
+                                value={selectedSystemId} 
+                                onChange={(e) => setSelectedSystemId(e.target.value)}
+                                className="w-full bg-white/5 border border-white/10 p-4 rounded-xl font-bold appearance-none"
                             >
-                                {cat}
-                            </button>
-                        ))}
+                                <option value="">Selecciona Partida...</option>
+                                {availableSystems.map(s => <option key={s.id} value={s.id} className="bg-slate-900" >{s.name}</option>)}
+                            </select>
+                        </div>
+                    )}
+                </div>
+
+                {/* Dimensiones Mandatorias */}
+                <div className="bg-primary/5 border border-primary/20 p-6 rounded-[32px] space-y-6">
+                    <h3 className="text-xs font-black uppercase tracking-widest text-primary italic">Dimensiones de Ingeniería</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                            <label className="text-[9px] font-black uppercase text-white/40 ml-2">Largo (m)</label>
+                            <input
+                                placeholder="0.00"
+                                value={tempDims.largo}
+                                onChange={(e) => setTempDims({...tempDims, largo: e.target.value})}
+                                className="w-full bg-black border border-white/5 p-4 rounded-2xl font-mono font-black text-xl text-primary text-center"
+                            />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-[9px] font-black uppercase text-white/40 ml-2">Ancho (m)</label>
+                            <input
+                                placeholder="0.00"
+                                value={tempDims.ancho}
+                                onChange={(e) => setTempDims({...tempDims, ancho: e.target.value})}
+                                className="w-full bg-black border border-white/5 p-4 rounded-2xl font-mono font-black text-xl text-primary text-center"
+                            />
+                        </div>
+                        <div className="space-y-1 col-span-2">
+                            <label className="text-[9px] font-black uppercase text-white/40 ml-2 text-center block">Espesor (cm)</label>
+                            <input
+                                placeholder="10"
+                                value={tempDims.espesor}
+                                onChange={(e) => setTempDims({...tempDims, espesor: e.target.value})}
+                                className="w-full bg-black border border-primary/20 p-4 rounded-2xl font-mono font-black text-3xl text-primary text-center"
+                            />
+                        </div>
                     </div>
                 </div>
 
-                {/* Sistema */}
-                {selectedCategory && (
-                    <div className="space-y-2 animate-in slide-in-from-left duration-300">
-                        <label className="text-[10px] font-black uppercase text-white/40 flex items-center gap-2"><Settings2 className="w-3 h-3"/> Especificación Técnica</label>
-                        <select
-                            value={selectedSystemId}
-                            onChange={(e) => setSelectedSystemId(e.target.value)}
-                            className="w-full bg-white/5 border border-white/10 p-5 rounded-2xl font-black text-white outline-none focus:border-primary/50 transition-all appearance-none"
-                        >
-                            <option value="">Selecciona Partida...</option>
-                            {availableSystems.map(s => (
-                                <option key={s.id} value={s.id} className="bg-slate-900">{s.name}</option>
-                            ))}
-                        </select>
-                    </div>
-                )}
-
-                {/* Medida Maestra */}
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase text-white/40 flex items-center gap-2"><Ruler className="w-3 h-3"/> Medida Maestra (m)</label>
-                        <input
-                            type="text"
-                            placeholder="Ej: 3.20"
-                            value={masterMeasure}
-                            onChange={(e) => setMasterMeasure(e.target.value)}
-                            className="w-full bg-white/5 border border-white/10 p-5 rounded-2xl font-black text-xl text-primary outline-none focus:border-primary/50"
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase text-white/40 flex items-center gap-2"><TrendingUp className="w-3 h-3"/> Pérdida (%)</label>
-                        <select
-                            value={wasteMargin}
-                            onChange={(e) => setWasteMargin(parseFloat(e.target.value))}
-                            className="w-full bg-white/5 border border-white/10 p-5 rounded-2xl font-black text-xl text-white outline-none focus:border-primary/50 appearance-none"
-                        >
-                            <option value={0.05} className="bg-slate-900">5% (Óptimo)</option>
-                            <option value={0.10} className="bg-slate-900">10% (Normal)</option>
-                            <option value={0.15} className="bg-slate-900">15% (Seguridad)</option>
-                        </select>
-                    </div>
-                </div>
-
-                {/* Proyecto Info */}
+                {/* Proyecto Info (Ubicación) */}
                 <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                         <label className="text-[10px] font-black uppercase text-white/40">Región</label>
-                        <select value={selectedRegion} onChange={(e) => setSelectedRegion(e.target.value)} className="w-full bg-white/5 border border-white/10 p-4 rounded-xl text-xs font-bold">
+                        <select value={selectedRegion} onChange={(e) => setSelectedRegion(e.target.value)} className="w-full bg-white/5 border border-white/10 p-4 rounded-xl text-xs font-bold appearance-none">
                             <option value="">Región...</option>
                             {REGIONS_CHILE.map(r => <option key={r.name} value={r.name} className="bg-slate-900">{r.name}</option>)}
                         </select>
                     </div>
                     <div className="space-y-2">
                         <label className="text-[10px] font-black uppercase text-white/40">Comuna</label>
-                        <select value={selectedCommune} onChange={(e) => setSelectedCommune(e.target.value)} disabled={!selectedRegion} className="w-full bg-white/5 border border-white/10 p-4 rounded-xl text-xs font-bold">
+                        <select value={selectedCommune} onChange={(e) => setSelectedCommune(e.target.value)} disabled={!selectedRegion} className="w-full bg-white/5 border border-white/10 p-4 rounded-xl text-xs font-bold appearance-none">
                             <option value="">Comuna...</option>
                             {REGIONS_CHILE.find(r => r.name === selectedRegion)?.communes.map(c => <option key={c} value={c} className="bg-slate-900" >{c}</option>)}
                         </select>
@@ -432,15 +407,13 @@ export default function Scanner() {
 
                 <Button
                     size="lg"
-                    disabled={!selectedSystemId || !selectedCommune}
+                    disabled={!validatePreConfig()}
                     onClick={() => setStep('upload')}
-                    className="w-full h-20 rounded-3xl bg-primary text-black font-black text-xl uppercase tracking-tighter shadow-2xl shadow-primary/20 hover:scale-[1.02] transition-transform flex gap-3"
+                    className="w-full h-20 rounded-3xl bg-primary text-black font-black text-xl uppercase tracking-tighter shadow-2xl shadow-primary/20 hover:scale-[1.02] transition-transform flex gap-3 disabled:opacity-30"
                 >
                     Siguiente: Capturar <ChevronLeft className="w-6 h-6 rotate-180" />
                 </Button>
             </div>
-            
-            <AdSenseSlot id="config-bottom" className="mt-4" />
           </div>
         )}
 
@@ -452,17 +425,25 @@ export default function Scanner() {
              </div>
              <div className="space-y-2">
                 <h2 className="text-3xl font-black uppercase italic tracking-tighter">Capturar Imagen</h2>
-                <p className="text-xs font-bold text-white/30 uppercase tracking-[0.3em]">La IA detectará los volúmenes finales</p>
+                <p className="text-xs font-bold text-white/30 uppercase tracking-[0.3em]">IA Analizará Contexto Visual</p>
              </div>
              <div className="p-6 bg-white/5 border border-white/10 rounded-3xl text-left space-y-3 w-full">
                 <div className="flex justify-between items-center text-[10px] uppercase font-black tracking-widest">
-                    <span className="text-primary">Configuración Activa:</span>
-                    <button onClick={() => setStep('config')} className="text-white/40 underline">Cambiar</button>
+                    <span className="text-primary font-bold">Datos Inyectados:</span>
                 </div>
-                <p className="text-sm font-bold truncate">{SYSTEMS_CATALOG.find(s => s.id === selectedSystemId)?.name}</p>
-                <div className="flex gap-4 text-[10px] font-black opacity-50 uppercase">
-                    <span><Ruler className="inline w-3 h-3 mr-1" /> {masterMeasure}m</span>
-                    <span><TrendingUp className="inline w-3 h-3 mr-1" /> {wasteMargin * 100}%</span>
+                <div className="grid grid-cols-3 gap-2 text-center bg-black/50 p-4 rounded-xl">
+                    <div>
+                        <p className="text-[8px] text-white/40 uppercase">Largo</p>
+                        <p className="text-sm font-black text-white">{tempDims.largo}m</p>
+                    </div>
+                    <div>
+                        <p className="text-[8px] text-white/40 uppercase">Ancho</p>
+                        <p className="text-sm font-black text-white">{tempDims.ancho}m</p>
+                    </div>
+                    <div>
+                        <p className="text-[8px] text-white/40 uppercase">Espesor</p>
+                        <p className="text-sm font-black text-white">{tempDims.espesor}cm</p>
+                    </div>
                 </div>
              </div>
            </div>
@@ -476,95 +457,221 @@ export default function Scanner() {
                  <Lucide.Zap className="w-5 h-5 mr-3" /> Ver Reporte Forzado
                </Button>
              )}
-             <AdSenseSlot id="analyzing-mid" />
            </div>
         )}
 
-        {step === 'confirm' && (
-          <div className="space-y-8 animate-in slide-in-from-bottom duration-700 py-8">
-            <div className="bg-white/5 border border-white/10 rounded-[40px] p-8 space-y-6">
-                <div className="flex justify-between items-center">
-                   <h2 className="text-2xl font-black italic tracking-tighter uppercase text-primary">Resultados</h2>
-                   {previewImage && (
-                    <div className="w-12 h-12 rounded-lg overflow-hidden border border-white/20">
-                        <img src={previewImage} className="w-full h-full object-cover" alt="Contexto" />
-                    </div>
-                   )}
-                   <div className="flex gap-2">
-                    <button onClick={() => setUnitMode(u => u === 'm' ? 'cm' : 'm')} className="px-3 py-1 bg-white/10 rounded-full text-[10px] font-black uppercase">
-                        {unitMode}
-                    </button>
-                   </div>
-                </div>
+        {step === 'dosage_config' && (
+            <div className="py-8 space-y-8 animate-in slide-in-from-right duration-500">
+                <header className="space-y-2 text-center">
+                    <h2 className="text-3xl font-black tracking-tighter uppercase italic leading-none text-primary">Dosificación <span className="text-white">Elite</span></h2>
+                    <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest italic">Personalización Técnica de Mezcla</p>
+                </header>
 
-                <div className="grid grid-cols-2 gap-4">
-                    {['largo', 'ancho', 'alto', 'espesor'].map((dim) => (
-                        <div key={dim} className="space-y-1">
-                            <label className="text-[10px] font-black uppercase text-white/30 ml-2">{dim}</label>
-                            <input
-                                value={dim === 'largo' ? localLargo : dim === 'ancho' ? localAncho : dim === 'alto' ? localAlto : localEspesor}
-                                onChange={(e) => handleLocalInputChange(dim as any, e.target.value)}
-                                className="w-full bg-black border border-white/5 p-4 rounded-2xl font-mono font-black text-xl text-primary text-center"
-                            />
+                <div className="space-y-6">
+                    {/* Resistencia */}
+                    <div className="space-y-3">
+                        <label className="text-[10px] font-black uppercase text-white/40 flex items-center gap-2 px-2"><Settings2 className="w-3 h-3" /> Resistencia Hormigón</label>
+                        <div className="grid grid-cols-3 gap-3">
+                            {["H-20", "H-25", "H-30"].map(r => (
+                                <button
+                                    key={r}
+                                    onClick={() => setDosage({...dosage, resistencia: r as any})}
+                                    className={`p-4 rounded-2xl border font-black transition-all ${dosage.resistencia === r ? 'bg-primary border-primary text-black' : 'bg-white/5 border-white/10 text-white/60'}`}
+                                >
+                                    {r}
+                                </button>
+                            ))}
                         </div>
-                    ))}
+                    </div>
+
+                    {/* Tiempo de Secado */}
+                    <div className="space-y-3">
+                        <label className="text-[10px] font-black uppercase text-white/40 flex items-center gap-2 px-2"><RotateCcw className="w-3 h-3" /> Requerimiento de Curado</label>
+                        <div className="grid grid-cols-2 gap-3">
+                            {["Estándar", "R-7"].map(s => (
+                                <button
+                                    key={s}
+                                    onClick={() => setDosage({...dosage, secado: s as any})}
+                                    className={`p-4 rounded-2xl border font-black transition-all ${dosage.secado === s ? 'bg-primary border-primary text-black scale-105' : 'bg-white/5 border-white/10 text-white/60'}`}
+                                >
+                                    {s}
+                                    {s === 'R-7' && <span className="block text-[8px] opacity-60">Alta Resistencia</span>}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Armadura */}
+                    <div className="space-y-3">
+                        <label className="text-[10px] font-black uppercase text-white/40 flex items-center gap-2 px-2"><Boxes className="w-3 h-3" /> Sistema de Armadura</label>
+                        <div className="space-y-3">
+                             <div className="flex gap-3">
+                                <button
+                                    onClick={() => setDosage({...dosage, armaduraTipo: "ACMA", armaduraDetalle: "malla_acma_c92"})}
+                                    className={`flex-1 p-4 rounded-2xl border font-black transition-all ${dosage.armaduraTipo === 'ACMA' ? 'bg-primary border-primary text-black' : 'bg-white/5 border-white/10 text-white/60'}`}
+                                >
+                                    Malla ACMA
+                                </button>
+                                <button
+                                    onClick={() => setDosage({...dosage, armaduraTipo: "Tradicional", armaduraDetalle: "fierro_10"})}
+                                    className={`flex-1 p-4 rounded-2xl border font-black transition-all ${dosage.armaduraTipo === 'Tradicional' ? 'bg-primary border-primary text-black' : 'bg-white/5 border-white/10 text-white/60'}`}
+                                >
+                                    Fierro Tradicional
+                                </button>
+                             </div>
+
+                             <div className="bg-black/40 border border-white/5 p-5 rounded-[24px]">
+                                <label className="text-[8px] font-black uppercase text-white/30 block mb-3 text-center">Especificación de Acero</label>
+                                {dosage.armaduraTipo === 'ACMA' ? (
+                                    <select 
+                                        value={dosage.armaduraDetalle}
+                                        onChange={(e) => setDosage({...dosage, armaduraDetalle: e.target.value})}
+                                        className="w-full bg-transparent text-center font-black text-sm text-primary outline-none"
+                                    >
+                                        <option value="malla_acma_c92" className="bg-slate-900">Malla C-92 (Estándar)</option>
+                                        <option value="malla_acma_c139" className="bg-slate-900">Malla C-139 (Pesada)</option>
+                                        <option value="malla_acma_c188" className="bg-slate-900">Malla C-188 (Industrial)</option>
+                                    </select>
+                                ) : (
+                                    <div className="flex justify-center gap-4">
+                                        {["fierro_8", "fierro_10", "fierro_12"].map(f => (
+                                            <button 
+                                                key={f}
+                                                onClick={() => setDosage({...dosage, armaduraDetalle: f})}
+                                                className={`px-4 py-2 rounded-lg font-black text-xs ${dosage.armaduraDetalle === f ? 'bg-primary text-black' : 'bg-white/10 text-white/40'}`}
+                                            >
+                                                {f === 'fierro_8' ? '8mm' : f === 'fierro_10' ? '10mm' : '12mm'}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                             </div>
+                        </div>
+                    </div>
+
+                    <Button
+                        size="lg"
+                        onClick={() => setStep('confirm')}
+                        className="w-full h-20 rounded-3xl bg-primary text-black font-black text-xl uppercase tracking-tighter flex gap-3 shadow-2xl shadow-primary/20"
+                    >
+                        Generar Cubicaciones <CheckCircle2 className="w-6 h-6" />
+                    </Button>
+                </div>
+            </div>
+        )}
+
+        {step === 'confirm' && (
+          <div className="space-y-8 animate-in slide-in-from-bottom duration-700 py-8 pb-32">
+            <header className="flex justify-between items-end">
+                <div className="space-y-1">
+                    <h2 className="text-3xl font-black italic tracking-tighter uppercase text-primary">Reporte <span className="text-white">Elite</span></h2>
+                    <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest italic">{projectNameInput}</p>
+                </div>
+                <div className="flex flex-col items-end gap-2">
+                    {previewImage && (
+                        <div className="w-12 h-12 rounded-xl overflow-hidden border border-white/10 shadow-lg">
+                            <img src={previewImage} className="w-full h-full object-cover" alt="Contexto" />
+                        </div>
+                    )}
+                    <div className="px-3 py-1 bg-primary/10 border border-primary/30 rounded-full flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
+                        <span className="text-[8px] font-black text-primary uppercase">Validado por AEC</span>
+                    </div>
+                </div>
+            </header>
+
+            <div className="bg-white/5 border border-white/10 rounded-[40px] p-8 space-y-6">
+                <div className="flex justify-between items-center bg-black/50 p-4 rounded-2xl border border-white/5">
+                    <div>
+                        <p className="text-[8px] font-black text-white/30 uppercase mb-1">Volumen Cubicada</p>
+                        <p className="text-xl font-black text-white">{(editedDims.largo * editedDims.ancho * editedDims.espesor).toFixed(2)} m³</p>
+                    </div>
+                    <div className="text-right">
+                        <p className="text-[8px] font-black text-white/30 uppercase mb-1">Armadura Base</p>
+                        <p className="text-xl font-black text-primary">{dosage.armaduraTipo === 'ACMA' ? 'Malla C' : 'Fierro'}</p>
+                    </div>
                 </div>
 
-                <div className="space-y-3 pt-4">
-                    <h3 className="text-[10px] font-black uppercase text-white/40 tracking-widest opacity-50 flex items-center gap-2">
-                        <Lucide.ListChecks className="w-3 h-3" /> Listado de Materiales (Ingeniería)
+                <div className="space-y-4 pt-2">
+                    <h3 className="text-[10px] font-black uppercase text-white/40 tracking-widest flex items-center gap-2 px-2">
+                        <Lucide.ListChecks className="w-3 h-3 text-primary" /> Desglose de Materiales Real
                     </h3>
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                         {currentMaterials.map((m, i) => (
-                            <div key={i} className="flex justify-between items-center bg-white/5 p-4 rounded-xl border border-white/5">
-                                <div>
-                                    <p className="text-[11px] font-black uppercase">{m.name}</p>
-                                    <p className="text-[9px] font-bold text-white/40">{m.quantity.toFixed(2)} {m.unit}</p>
+                            <div key={i} className="flex justify-between items-center bg-white/5 p-5 rounded-2xl border border-white/5 hover:border-primary/20 transition-all group">
+                                <div className="space-y-1">
+                                    <p className="text-[11px] font-black uppercase group-hover:text-primary transition-colors">{m.name}</p>
+                                    <p className="text-[9px] font-bold text-white/40 italic">{m.quantity.toFixed(2)} {m.unit} • Rendimiento Real</p>
                                 </div>
-                                <span className="text-sm font-black text-primary">${m.total.toLocaleString('es-CL')}</span>
+                                <div className="text-right">
+                                    <p className="text-sm font-black text-white">${m.total.toLocaleString('es-CL')}</p>
+                                    <p className="text-[8px] font-black text-white/20 uppercase">Subtotal</p>
+                                </div>
                             </div>
                         ))}
                     </div>
                 </div>
 
-                <div className="bg-primary p-8 rounded-[40px] text-black space-y-4">
+                <div className="bg-primary p-8 rounded-[40px] text-black space-y-4 shadow-3xl shadow-primary/20">
                     <div className="flex justify-between text-[10px] font-black uppercase opacity-60 italic border-b border-black/10 pb-2">
-                        <span>Total Neto Estimado</span>
+                        <span>Presupuesto Base (Incl. {wasteMargin * 100}% Pérdida)</span>
                         <span>${currentCost.total.toLocaleString('es-CL')}</span>
                     </div>
                     <div className="text-center py-2">
-                        <p className="text-5xl font-black italic tracking-tighter">${(currentCost.total * 1.19).toLocaleString('es-CL')}</p>
-                        <p className="text-[9px] font-black uppercase opacity-50">IVA Incluido (19%)</p>
+                        <p className="text-6xl font-black italic tracking-tighter">${(currentCost.total * 1.19).toLocaleString('es-CL')}</p>
+                        <p className="text-[10px] font-black uppercase opacity-50 tracking-[0.2em] mt-1">Suma Total IVA Incluido</p>
                     </div>
-                    <Button onClick={handleExportPDF} className="w-full h-16 rounded-2xl bg-black text-primary font-black uppercase tracking-tighter hover:bg-zinc-900 border-none transition-all">
-                        <Download className="w-5 h-5 mr-3" /> Exportar Planilla AEC
-                    </Button>
+                    <div className="flex gap-3">
+                        <Button 
+                            onClick={handleExportPDF} 
+                            className="flex-1 h-16 rounded-2xl bg-black text-primary font-black uppercase tracking-tighter hover:bg-zinc-900 border-none transition-all flex gap-3"
+                        >
+                            <Download className="w-5 h-5" /> 
+                            <span>Descargar PDF</span>
+                            <Lock className="w-4 h-4 opacity-50" />
+                        </Button>
+                        <button onClick={() => setStep('config')} className="w-16 h-16 rounded-2xl bg-black/5 hover:bg-black/10 flex items-center justify-center transition-all border border-black/10">
+                            <RotateCcw className="w-6 h-6 text-black/50" />
+                        </button>
+                    </div>
                 </div>
             </div>
+
+            <div className="bg-primary/10 border border-primary/30 p-6 rounded-3xl flex items-center gap-4">
+                <AlertCircle className="w-6 h-6 text-primary shrink-0" />
+                <p className="text-[10px] font-bold text-white leading-relaxed">
+                    Este reporte es el cálculo preliminar de ingeniería. Para certificar esta cubicación con firma y timbre profesional, utiliza el botón de <span className="text-primary font-black">Descargar PDF</span>.
+                </p>
+            </div>
+            
+            <AdSenseSlot id="results-bottom" />
           </div>
         )}
       </main>
 
+      {/* Paywall Modal (Solo en Descarga PDF) */}
       <AnimatePresence>
-        {showRegisterModal && (
-          <div className="fixed inset-0 z-[1100] flex items-center justify-center p-6 bg-black/95 backdrop-blur-2xl">
-            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-sm bg-slate-900 border border-primary/20 rounded-[48px] p-10 text-center shadow-2xl">
-              <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6"><Lucide.UserPlus className="w-10 h-10 text-primary" /></div>
-              <h3 className="text-2xl font-black tracking-tighter uppercase text-white mb-2 underline decoration-primary">Límite Alcanzado</h3>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-8 text-center">Registra tu cuenta profesional para guardar proyectos y exportar PDFs ilimitados.</p>
-              <Button onClick={() => navigate('/register')} className="w-full h-14 rounded-2xl bg-primary text-black font-black uppercase tracking-tighter">Crear Cuenta AEC</Button>
+        {showPaywall && (
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center p-6 bg-black/95 backdrop-blur-2xl">
+            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-sm bg-slate-900 border border-primary/20 rounded-[48px] p-10 text-center">
+              <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6"><FileText className="w-10 h-10 text-primary" /></div>
+              <h3 className="text-2xl font-black tracking-tighter uppercase text-white mb-2 italic">Exportar Memoria<br /><span className="text-primary">Técnica Profesional</span></h3>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-8">PDF Certificado con validez para bancos, constructoras y compras en retail.</p>
+              <div className="text-5xl font-black text-white mb-2">$2.990</div>
+              <p className="text-[8px] font-black text-primary/60 uppercase tracking-widest mb-8">Acceso de por vida a este reporte</p>
+              <Button onClick={exportPDF} className="w-full h-16 rounded-[28px] bg-primary text-black font-black uppercase shadow-2xl shadow-primary/20">Desbloquear Ahora</Button>
+              <button onClick={() => setShowPaywall(false)} className="mt-6 text-[10px] font-black text-white/20 uppercase hover:text-white transition-colors">Volver al Reporte Gratis</button>
             </motion.div>
           </div>
         )}
 
-        {showPaywall && (
-          <div className="fixed inset-0 z-[1000] flex items-center justify-center p-6 bg-black/95 backdrop-blur-2xl">
-            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-sm bg-slate-900 border border-primary/20 rounded-[48px] p-10 text-center">
-              <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6"><Lock className="w-10 h-10 text-primary" /></div>
-              <h3 className="text-2xl font-black tracking-tighter uppercase text-white mb-2">Desbloquear Reporte</h3>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-8">Pago único por proyecto.</p>
-              <div className="text-5xl font-black text-white mb-8">$2.990</div>
-              <Button onClick={() => setShowPaywall(false)} className="w-full h-16 rounded-[28px] bg-primary text-black font-black uppercase">Liberar PDF Profesional</Button>
+        {showRegisterModal && (
+          <div className="fixed inset-0 z-[1100] flex items-center justify-center p-6 bg-black/95 backdrop-blur-2xl">
+            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-sm bg-slate-900 border border-primary/20 rounded-[48px] p-10 text-center shadow-2xl">
+              <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6"><Lucide.UserPlus className="w-10 h-10 text-primary" /></div>
+              <h3 className="text-2xl font-black tracking-tighter uppercase text-white mb-2 italic underline decoration-primary">Portal Ingeniería</h3>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-8 text-center">Registra tu firma profesional para guardar proyectos y exportar PDFs ilimitados.</p>
+              <Button onClick={() => navigate('/register')} className="w-full h-14 rounded-2xl bg-primary text-black font-black uppercase tracking-tighter">Crear Cuenta AEC</Button>
             </motion.div>
           </div>
         )}

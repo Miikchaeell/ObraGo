@@ -9,7 +9,7 @@ import { Button } from './ui/button';
 export const SupportWidget: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<{ role: 'user' | 'bot'; content: string }[]>([
-    { role: 'bot', content: '¡Hola! Soy el Ingeniero de Soporte de Obra Go. ¿En qué puedo ayudarte sobre tu cálculo o el uso de la plataforma?' }
+    { role: 'bot', content: '¡Hola! Soy el Ingeniero de Soporte de Obra Go. Estamos actualizando el sistema para incluir dosificaciones profesionales como R-7 y enfierradura. Tu reporte gratis estará disponible en minutos. ¿En qué puedo ayudarte sobre tu cálculo técnico?' }
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);

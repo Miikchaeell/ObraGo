@@ -7,6 +7,13 @@ export interface Dimensions {
   alto: number;
 }
 
+export interface DosageSelection {
+  resistencia: "H-20" | "H-25" | "H-30";
+  secado: "Estándar" | "R-7";
+  armaduraTipo: "ACMA" | "Tradicional";
+  armaduraDetalle: string; // ID de malla o diámetro
+}
+
 export interface MaterialLine {
   id: string;
   name: string;
@@ -31,7 +38,6 @@ export const calculateGeometricData = (dims: Dimensions, systemId: string | null
   const { largo, ancho, espesor, alto } = dims;
   const sys = SYSTEMS_CATALOG.find(s => s.id === systemId);
   
-  // Lógica de área según categoría/sistema
   let area = largo * ancho;
   if (sys?.baseUnit === 'mt' || sys?.baseUnit === 'm') area = largo;
   if (sys?.category === 'Estructuras' || sys?.category === 'Tabiquería' || sys?.name.toLowerCase().includes("muro")) {
@@ -45,7 +51,8 @@ export const calculateMaterialQuantities = (
   systemId: string | null, 
   dims: Dimensions,
   prices: Record<string, number>,
-  wasteMargin: number = 0 // Recibimos el margen del usuario (0.05, 0.10, 0.15)
+  wasteMargin: number = 0,
+  dosage?: DosageSelection
 ): MaterialLine[] => {
   if (!systemId) return [];
   const system = SYSTEMS_CATALOG.find(s => s.id === systemId);
@@ -54,20 +61,36 @@ export const calculateMaterialQuantities = (
   const { area, volume } = calculateGeometricData(dims, systemId);
   const base = system.baseUnit === 'm2' ? area : (system.baseUnit === 'mt' || system.baseUnit === 'm' ? area : volume);
 
-  return system.materialIds.map(mid => {
+  // Filtrar IDs base para reemplazo dinámico (Hormigón y Armadura)
+  let materialIds = [...system.materialIds];
+
+  if (dosage && system.category === "Obra Gruesa") {
+    // 1. Reemplazar Hormigón
+    const concreteId = dosage.resistencia === "H-20" ? "horm_h20" : (dosage.resistencia === "H-25" ? "horm_h25" : "horm_h30");
+    materialIds = materialIds.filter(id => !id.startsWith("horm_"));
+    materialIds.push(concreteId);
+
+    // 2. Reemplazar Armadura
+    materialIds = materialIds.filter(id => !id.startsWith("malla_") && !id.startsWith("fierro_"));
+    materialIds.push(dosage.armaduraDetalle);
+  }
+
+  return materialIds.map(mid => {
     const mat = MATERIALS_CATALOG.find(m => m.id === mid);
     if (!mat) return null;
 
-    // Lógica dinámica de margen (NCh + Selección Usuario)
-    const safetyFactor = 1 + wasteMargin; // El sistema agrega el % elegido por el ingeniero
-    
-    // Cantidad base + Factor de pérdida de obra real
+    const safetyFactor = 1 + wasteMargin;
     const qty = base * mat.coverage * safetyFactor;
-    const price = prices[mat.id] || mat.refPrice;
+    let price = prices[mat.id] || mat.refPrice;
+
+    // Lógica R-7: Surcharge del 20% sobre el hormigón
+    if (dosage?.secado === "R-7" && mat.category === "Hormigones" && mat.id.startsWith("horm_")) {
+      price = price * 1.20;
+    }
 
     return {
       id: mat.id,
-      name: mat.name,
+      name: mat.name + (dosage?.secado === "R-7" && mat.id.startsWith("horm_") ? " (R-7)" : ""),
       unit: mat.unit,
       baseQuantity: base * mat.coverage,
       quantity: qty,
@@ -91,7 +114,6 @@ export const calculateTotalCost = (
   const { area, volume } = calculateGeometricData(dims, systemId);
   const sys = SYSTEMS_CATALOG.find(s => s.id === systemId);
   
-  // Valor unitario base según unidad del sistema
   const baseValue = sys?.baseUnit === 'm2' ? area : (sys?.baseUnit === 'mt' || sys?.baseUnit === 'm' ? area : volume);
   
   const labor = Math.round(baseValue * (sys?.laborRate || 0));
