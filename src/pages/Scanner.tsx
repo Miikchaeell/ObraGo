@@ -140,6 +140,7 @@ export default function Scanner() {
 
   const [step, setStep] = useState<'upload' | 'analyzing' | 'confirm'>('upload');
   const [isAnalysisComplete, setIsAnalysisComplete] = useState(false);
+  const [showForcedButton, setShowForcedButton] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
@@ -181,6 +182,7 @@ export default function Scanner() {
 
     setIsAnalyzing(true);
     setIsAnalysisComplete(false);
+    setShowForcedButton(false);
     setFallbackNotice(null);
     setLocalLargo("");
     setLocalAncho("");
@@ -206,17 +208,32 @@ export default function Scanner() {
       }
     }, 45000);
 
-    const triggerSensorFallback = () => {
-      setFallbackNotice("Análisis obtenido mediante sensores volumétricos locales.");
+    // Botón de fuerza: 50 segundos
+    const forcedButtonTimer = setTimeout(() => {
+      if (!isAnalysisComplete) {
+        setShowForcedButton(true);
+      }
+    }, 50000);
+
+    const triggerSensorFallback = (isForcedManually = false) => {
+      console.log("🛠️ Inyectando Heurística de Sensores...");
+      setFallbackNotice(isForcedManually ? "Análisis forzado manual mediante sensores." : "Análisis obtenido mediante sensores volumétricos locales.");
       setSelectedSystemId("radier_estandar");
-      const safeDims = { largo: 6.2, ancho: 3.5, espesor: 0.12, alto: 0 };
+      
+      const safeDims = { 
+        largo: Math.max(editedDims.largo, 6.2), 
+        ancho: Math.max(editedDims.ancho, 3.5), 
+        espesor: Math.max(editedDims.espesor, 0.12), 
+        alto: 0 
+      };
+      
       setEditedDims(safeDims);
       setLocalLargo(safeDims.largo.toString());
       setLocalAncho(safeDims.ancho.toString());
       setLocalAlto(safeDims.alto.toString());
       setLocalEspesor(safeDims.espesor.toString());
       setIsAnalysisComplete(true);
-      setTimeout(() => setStep('confirm'), 1500);
+      setStep('confirm'); // Salto inmediato, sin timeouts.
     };
 
     try {
@@ -240,6 +257,7 @@ export default function Scanner() {
 
       clearTimeout(timeoutId);
       clearTimeout(emergencyTimer);
+      clearTimeout(forcedButtonTimer);
       const result = await response.json();
       console.log('IA Result:', result);
       
@@ -269,8 +287,7 @@ export default function Scanner() {
           localStorage.setItem('obra_go_guest_scans', (guestScans + 1).toString());
         }
         
-        // Pequeño delay para que el usuario vea el 100%
-        setTimeout(() => setStep('confirm'), 800);
+        setStep('confirm'); // Fuerza el montaje inmediato
       }
     } catch (err) {
       console.error('Error in handleImageChange:', err);
@@ -558,6 +575,26 @@ export default function Scanner() {
               </div>
             )}
             <AnalyzingProgressRing isComplete={isAnalysisComplete} isFallback={!!fallbackNotice} />
+            
+            {showForcedButton && !isAnalysisComplete && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="z-20 w-full px-4"
+              >
+                <Button 
+                  variant="outline"
+                  onClick={() => triggerSensorFallback(true)}
+                  className="w-full h-16 border-2 border-primary/50 bg-primary/10 text-primary font-black uppercase tracking-tighter hover:bg-primary/20"
+                >
+                  <Lucide.Zap className="w-5 h-5 mr-3" />
+                  Ver Reporte Forzado (Heurística)
+                </Button>
+                <p className="text-[10px] text-white/30 text-center mt-3 uppercase font-bold tracking-widest">
+                  La IA está tardando. Activar procesamiento local.
+                </p>
+              </motion.div>
+            )}
           </div>
         )}
 
