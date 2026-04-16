@@ -127,14 +127,15 @@ export default function Scanner() {
   
   // Dosage Options
   const [dosage, setDosage] = useState<DosageSelection>({
-    resistencia: "H-20",
+    resistencia: "G-25",
     secado: "Estándar",
     armaduraTipo: "ACMA",
     armaduraDetalle: "malla_acma_c92",
     aditivos: [],
     vaciado: "Directa",
     mezclado: "Planta (Mixer)",
-    acabado: "Platachado"
+    acabado: "Platachado",
+    colocacion: "GN"
   });
 
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -502,15 +503,35 @@ export default function Scanner() {
                 <div className="space-y-6">
                     {/* Resistencia */}
                     <div className="space-y-3">
-                        <label className="text-[10px] font-black uppercase text-white/40 flex items-center gap-2 px-2"><Settings2 className="w-3 h-3" /> Resistencia Hormigón</label>
+                        <label className="text-[10px] font-black uppercase text-white/40 flex items-center gap-2 px-2"><Settings2 className="w-3 h-3" /> Resistencia Hormigón (Norma NCh 170)</label>
                         <div className="grid grid-cols-3 gap-3">
-                            {["H-20", "H-25", "H-30"].map(r => (
+                            {["G-17", "G-20", "G-25", "G-30", "G-35", "G-40"].map(r => (
                                 <button
                                     key={r}
                                     onClick={() => setDosage({...dosage, resistencia: r as any})}
-                                    className={`p-4 rounded-2xl border font-black transition-all ${dosage.resistencia === r ? 'bg-primary border-primary text-black' : 'bg-white/5 border-white/10 text-white/60'}`}
+                                    className={`p-3 rounded-xl border font-black transition-all ${dosage.resistencia === r ? 'bg-primary border-primary text-black' : 'bg-white/5 border-white/10 text-white/60'}`}
                                 >
-                                    {r}
+                                    <span className="text-[11px]">{r}</span>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Variación de Colocación NCh 170 */}
+                    <div className="space-y-3">
+                        <label className="text-[10px] font-black uppercase text-white/40 flex items-center gap-2 px-2"><Zap className="w-3 h-3" /> Variación de Colocación (Hormigonado)</label>
+                        <div className="grid grid-cols-2 gap-3">
+                            {[
+                                { id: 'GN', label: 'Grado Normal', sub: 'Convencional' },
+                                { id: 'GB', label: 'Grado Bombeable', sub: 'Incl. Plastificante' }
+                            ].map(c => (
+                                <button
+                                    key={c.id}
+                                    onClick={() => setDosage({...dosage, colocacion: c.id as any})}
+                                    className={`p-4 rounded-2xl border font-black transition-all ${dosage.colocacion === c.id ? 'bg-primary border-primary text-black scale-105 shadow-xl shadow-primary/20' : 'bg-white/5 border-white/10 text-white/60'}`}
+                                >
+                                    <span className="text-[10px] uppercase block leading-none mb-1">{c.label}</span>
+                                    <span className="text-[7px] uppercase opacity-60 tracking-widest">{c.sub}</span>
                                 </button>
                             ))}
                         </div>
@@ -750,11 +771,17 @@ export default function Scanner() {
                 </div>
             </div>
 
-            <div className="bg-primary/10 border border-primary/30 p-6 rounded-3xl flex items-center gap-4">
-                <AlertCircle className="w-6 h-6 text-primary shrink-0" />
-                <p className="text-[10px] font-bold text-white leading-relaxed">
-                    Este reporte es el cálculo preliminar de ingeniería. Para certificar esta cubicación con firma y timbre profesional, utiliza el botón de <span className="text-primary font-black">Descargar PDF</span>.
-                </p>
+            <div className="bg-primary/10 border border-primary/30 p-6 rounded-3xl flex items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                    <AlertCircle className="w-6 h-6 text-primary shrink-0" />
+                    <p className="text-[10px] font-bold text-white leading-relaxed">
+                        Este reporte es el cálculo preliminar de ingeniería. Para certificar esta cubicación con firma y timbre profesional, utiliza el botón de <span className="text-primary font-black">Descargar PDF</span>.
+                    </p>
+                </div>
+                <div className="flex flex-col items-center border-l border-primary/20 pl-4 shrink-0">
+                    <Lucide.ShieldCheck className="w-8 h-8 text-primary mb-1" />
+                    <p className="text-[7px] font-black text-primary uppercase tracking-widest">Norma NCh 170</p>
+                </div>
             </div>
             
             <AdSenseSlot id="results-bottom" />

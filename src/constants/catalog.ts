@@ -29,10 +29,14 @@ export const MATERIALS_CATALOG: Material[] = [
   { id: "pino_2x4", name: "Pino Dimensionado 2x4\" 3.2mt", category: "Maderas", unit: "mt", coverage: 0.55, refPrice: 3500, tags: ["estructura", "vivienda"] },
   { id: "cercha_mad", name: "Cercha Madera (Fabricación)", category: "Maderas", unit: "un", coverage: 0.15, refPrice: 25000, tags: ["techumbre", "estructura"] },
 
-  // HORMIGONES Y ALBAÑILERÍA
-  { id: "horm_h20", name: "Hormigón Premezclado H20", category: "Hormigones", unit: "m3", coverage: 1.0, refPrice: 125000, tags: ["radier", "fundacion"] },
-  { id: "horm_h25", name: "Hormigón Premezclado H25 (Bomba)", category: "Hormigones", unit: "m3", coverage: 1.05, refPrice: 138000, tags: ["losa", "viga", "pilar"] },
-  { id: "horm_h30", name: "Hormigón Premezclado H30", category: "Hormigones", unit: "m3", coverage: 1.0, refPrice: 152000, tags: ["estructura", "vivienda"] },
+  // HORMIGONES Y ALBAÑILERÍA (Norma NCh 170)
+  { id: "horm_g17", name: "Hormigón Grado G17", category: "Hormigones", unit: "m3", coverage: 1.0, refPrice: 118000, tags: ["radier", "plantilla"] },
+  { id: "horm_g20", name: "Hormigón Grado G20", category: "Hormigones", unit: "m3", coverage: 1.0, refPrice: 125000, tags: ["radier", "fundacion"] },
+  { id: "horm_g25", name: "Hormigón Grado G25", category: "Hormigones", unit: "m3", coverage: 1.05, refPrice: 138000, tags: ["losa", "viga", "pilar"] },
+  { id: "horm_g30", name: "Hormigón Grado G30", category: "Hormigones", unit: "m3", coverage: 1.0, refPrice: 152000, tags: ["estructura", "vivienda"] },
+  { id: "horm_g35", name: "Hormigón Grado G35", category: "Hormigones", unit: "m3", coverage: 1.0, refPrice: 168000, tags: ["estructura", "industrial"] },
+  { id: "horm_g40", name: "Hormigón Grado G40", category: "Hormigones", unit: "m3", coverage: 1.0, refPrice: 185000, tags: ["ingeniería", "alta resistencia"] },
+  { id: "adit_plast", name: "Aditivo Plastificante (Bombeo)", category: "Otros", unit: "L", coverage: 2.5, refPrice: 5200, tags: ["aditivo", "bombeo"] },
   { id: "lad_fiscal", name: "Ladrillo Fiscal 29x14x7cm", category: "Hormigones", unit: "un", coverage: 38, refPrice: 480, tags: ["albañilería", "muro"] },
   { id: "lad_princesa", name: "Ladrillo Princesa (Gran Formato)", category: "Hormigones", unit: "un", coverage: 42, refPrice: 650, tags: ["albañilería", "revestimiento"] },
   { id: "bloque_horm", name: "Bloque de Hormigón 19x19x39cm", category: "Hormigones", unit: "un", coverage: 12.5, refPrice: 1200, tags: ["muro", "perimetral"] },

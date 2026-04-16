@@ -7,8 +7,10 @@ export interface Dimensions {
   alto: number;
 }
 
+export type ConcreteGrade = "G-17" | "G-20" | "G-25" | "G-30" | "G-35" | "G-40";
+
 export interface DosageSelection {
-  resistencia: "H-20" | "H-25" | "H-30";
+  resistencia: ConcreteGrade; // Norma NCh 170
   secado: "Estándar" | "R-7";
   armaduraTipo: "ACMA" | "Tradicional";
   armaduraDetalle: string;
@@ -16,6 +18,7 @@ export interface DosageSelection {
   vaciado?: "Directa" | "Bomba Pluma" | "Bomba Estacionaria";
   mezclado?: "Planta (Mixer)" | "Obra (Trompo)";
   acabado?: "Platachado" | "Helicóptero" | "Escobillado";
+  colocacion?: "GN" | "GB"; // Grado Normal / Grado Bombeable (Plastificante)
 }
 
 export interface MaterialLine {
@@ -73,15 +76,21 @@ export const calculateMaterialQuantities = (
   if (dosage && system.category === "Obra Gruesa") {
     // 1. Lógica Mezclado (Mixer vs Obra)
     if (dosage.mezclado === "Obra (Trompo)") {
-        // Remover hormigón premezclado
         materialIds = materialIds.filter(id => !id.startsWith("horm_"));
-        // Asegurar que arena y gravilla estén
         if (!materialIds.includes("arena_m3")) materialIds.push("arena_m3");
         if (!materialIds.includes("gravilla_m3")) materialIds.push("gravilla_m3");
         if (!materialIds.includes("cem_saco")) materialIds.push("cem_saco");
     } else {
-        // Modo Mixer: Reemplazar con resistencia específica
-        const concreteId = dosage.resistencia === "H-20" ? "horm_h20" : (dosage.resistencia === "H-25" ? "horm_h25" : "horm_h30");
+        // Nomenclatura Norma NCh 170 (Grados G)
+        const gradeMap: Record<string, string> = {
+            "G-17": "horm_g17",
+            "G-20": "horm_g20",
+            "G-25": "horm_g25",
+            "G-30": "horm_g30",
+            "G-35": "horm_g35",
+            "G-40": "horm_g40"
+        };
+        const concreteId = gradeMap[dosage.resistencia] || "horm_g20";
         materialIds = materialIds.filter(id => !id.startsWith("horm_") && id !== "arena_m3" && id !== "gravilla_m3" && id !== "cem_saco");
         materialIds.push(concreteId);
     }
@@ -90,17 +99,21 @@ export const calculateMaterialQuantities = (
     materialIds = materialIds.filter(id => !id.startsWith("malla_") && !id.startsWith("fierro_"));
     materialIds.push(dosage.armaduraDetalle);
 
-    // 3. Inyectar Aditivos
-    if (dosage.aditivos) {
-        dosage.aditivos.forEach(a => {
-            if (a === 'impermeabilizante' && !materialIds.includes('adit_imper')) materialIds.push('adit_imper');
-            if (a === 'fibra' && !materialIds.includes('adit_fibra')) materialIds.push('adit_fibra');
-            if (a === 'retardante' && !materialIds.includes('adit_retar')) materialIds.push('adit_retar');
-        });
+    // 3. Aditivos Especiales + Lógica NCh 170 GB
+    const activeAditivos = new Set(dosage.aditivos || []);
+    if (dosage.colocacion === "GB") {
+        activeAditivos.add("adit_plast"); // Plastificante obligatorio para GB
     }
 
-    // 4. Inyectar Servicios de Bombeo
-    if (dosage.vaciado && dosage.vaciado !== "Directa") {
+    activeAditivos.forEach(a => {
+        if (a === 'impermeabilizante' && !materialIds.includes('adit_imper')) materialIds.push('adit_imper');
+        if (a === 'fibra' && !materialIds.includes('adit_fibra')) materialIds.push('adit_fibra');
+        if (a === 'retardante' && !materialIds.includes('adit_retar')) materialIds.push('adit_retar');
+        if (a === 'adit_plast' && !materialIds.includes('adit_plast')) materialIds.push('adit_plast');
+    });
+
+    // 4. Inyectar Servicios de Bombeo (Obligatorio en GB)
+    if (dosage.colocacion === "GB" || (dosage.vaciado && dosage.vaciado !== "Directa")) {
         if (!materialIds.includes("serv_bomba")) materialIds.push("serv_bomba");
     }
 
@@ -114,18 +127,14 @@ export const calculateMaterialQuantities = (
     if (!mat) return null;
 
     const safetyFactor = 1 + wasteMargin;
-    
-    // Ajuste de coberturas especiales para mezcla en obra (Cantidad por m3 de hormigón)
     let coverage = mat.coverage;
     if (dosage?.mezclado === "Obra (Trompo)") {
-        if (mat.id === "cem_saco") coverage = 8.5; // sacos por m3
+        if (mat.id === "cem_saco") coverage = 8.5; 
         if (mat.id === "arena_m3") coverage = 0.65;
         if (mat.id === "gravilla_m3") coverage = 0.85;
     }
 
-    // Los acabados se calculan por m2, no por m3
     const calculationBase = (mat.id.startsWith("acab_")) ? area : base;
-
     const qty = calculationBase * coverage * safetyFactor;
     let price = prices[mat.id] || mat.refPrice;
 
