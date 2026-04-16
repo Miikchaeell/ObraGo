@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { SupportWidget } from "@/components/SupportWidget";
 import { motion, AnimatePresence } from "framer-motion";
 import { jsPDF } from "jspdf";
+import "jspdf-autotable";
 import { 
   calculateMaterialQuantities, 
   calculateTotalCost
@@ -151,16 +152,6 @@ export default function Scanner() {
   const availableSystems = useMemo(() => SYSTEMS_CATALOG.filter(s => s.category === selectedCategory), [selectedCategory]);
   const currentSystem = useMemo(() => SYSTEMS_CATALOG.find(s => s.id === selectedSystemId), [selectedSystemId]);
 
-  /* Bypass de Registro para Pruebas 
-  useEffect(() => {
-    if (!user) {
-        const guestScans = parseInt(localStorage.getItem('obra_go_guest_scans') || '0');
-        if (guestScans >= 1) {
-            setShowRegisterModal(true);
-        }
-    }
-  }, [user]); */
-
   const validatePreConfig = () => {
     return (
         projectNameInput.trim() !== "" &&
@@ -177,13 +168,13 @@ export default function Scanner() {
         const timer = setTimeout(() => {
             const event = new CustomEvent('obra-go-bot-trigger', {
                 detail: {
-                    message: `¡Listo Michael! He liberado el acceso al Portal de Ingeniería para que puedas bajar tu reporte técnico ahora mismo sin registros. ¡Pruébalo y dime si los números te cuadran!`,
+                    message: `¡Hola! Soy parte del equipo de Obra Go. He liberado el acceso al Portal de Ingeniería para que puedas bajar tu reporte técnico ahora mismo. ¡Pruébalo y dime si los números te cuadran!`,
                     forceOpen: true
                 }
             });
             window.dispatchEvent(event);
             setHasTriggeredProactive(true);
-        }, 3000); // 3 segundos para testeo rápido
+        }, 3000); 
         return () => clearTimeout(timer);
     }
   }, [step, hasTriggeredProactive]);
@@ -247,7 +238,6 @@ export default function Scanner() {
       if (result.success) {
         setIsAnalysisComplete(true);
         
-        // Priorizar inputs manuales del constructor real
         setEditedDims({
             largo: parseFloat(tempDims.largo),
             ancho: parseFloat(tempDims.ancho),
@@ -276,14 +266,24 @@ export default function Scanner() {
   const currentCost = calculateTotalCost(selectedSystemId, editedDims, currentMaterials);
 
   const handleExportPDF = async () => {
-    // [V3.8] BYPASS TOTAL PARA TESTING
     exportPDF();
   };
 
   const exportPDF = () => {
-    const doc = new jsPDF();
+    const doc = new jsPDF() as any;
     
-    // Header
+    const addWatermark = (d: any) => {
+        d.setTextColor(240, 240, 240);
+        d.setFontSize(60);
+        d.setFont("helvetica", "bold");
+        d.saveGraphicsState();
+        d.setGState(new d.GState({opacity: 0.1}));
+        d.text("OBRA GO", 105, 150, { align: "center", angle: 45 });
+        d.restoreGraphicsState();
+    };
+
+    // HOJA 1: RESUMEN EJECUTIVO
+    addWatermark(doc);
     doc.setFillColor(15, 17, 21);
     doc.rect(0, 0, 210, 50, 'F');
     doc.setTextColor(225, 255, 0); 
@@ -292,66 +292,107 @@ export default function Scanner() {
     doc.text("OBRA GO", 105, 30, { align: "center" });
     doc.setFontSize(10);
     doc.setTextColor(255, 255, 255);
-    doc.text("INGENIERÍA ELITE Y CUBICACIÓN PROFESIONAL", 105, 42, { align: "center" });
+    doc.text("INGENIERÍA Y GESTIÓN DE COSTOS AEC", 105, 42, { align: "center" });
 
-    doc.setTextColor(0,0,0);
-    doc.setFontSize(12);
+    doc.setTextColor(40);
+    doc.setFontSize(14);
     let y = 65;
+    doc.setFont("helvetica", "bold");
+    doc.text("MEMORIA TÉCNICA E INFORME DE COSTOS", 15, y); y += 12;
     
-    // Technical Header
-    doc.setFont("helvetica", "bold");
-    doc.text(`PROYECTO: ${projectNameInput}`, 15, y); y += 8;
-    doc.setFont("helvetica", "normal");
-    doc.text(`PARTIDA: ${SYSTEMS_CATALOG.find(s => s.id === selectedSystemId)?.name}`, 15, y); y += 8;
-    doc.text(`ESPECIFICACIÓN: ${dosage.resistencia} (${dosage.colocacion}) / ${dosage.secado}`, 15, y); y += 8;
-    doc.text(`CERTIFICACIÓN: Calculado bajo Norma Chilena NCh 170`, 15, y); y += 8;
-    doc.text(`ARMADURA: ${dosage.armaduraTipo === 'ACMA' ? 'Malla ACMA' : 'Enfierradura Tradicional'}`, 15, y); y += 12;
-
-    doc.setFont("helvetica", "bold");
-    doc.text("DESGLOSE TÉCNICO DE MATERIALES:", 15, y); y += 10;
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
-    
-    currentMaterials.forEach(m => {
-      doc.text(`${m.name}`, 20, y);
-      doc.text(`${m.quantity.toFixed(2)} ${m.unit}`, 140, y);
-      doc.text(`$${m.total.toLocaleString('es-CL')}`, 175, y);
-      y += 7;
+    doc.text(`PROYECTO: ${projectNameInput.toUpperCase()}`, 15, y); y += 7;
+    doc.text(`FECHA: ${new Date().toLocaleDateString('es-CL')}`, 15, y); y += 7;
+    doc.text(`UBICACIÓN: ${selectedCommune}, ${selectedRegion}`, 15, y); y += 15;
+
+    doc.autoTable({
+        startY: y,
+        head: [['ÍTEM', 'DESCRIPCIÓN', 'UNIDAD', 'CANTIDAD', 'SUBTOTAL']],
+        body: [[
+            '01.01', 
+            SYSTEMS_CATALOG.find(s => s.id === selectedSystemId)?.name || '',
+            'GL',
+            '1.00',
+            formatCLP(currentCost.total)
+        ]],
+        theme: 'grid',
+        headStyles: { fillColor: [15, 17, 21], textColor: [225, 255, 0], fontStyle: 'bold' },
+        styles: { fontSize: 9 }
     });
 
-    y += 15;
+    y = (doc as any).lastAutoTable.finalY + 20;
     doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
-    doc.text(`INVERSIÓN TOTAL ESTIMADA: $${(currentCost.total * 1.19).toLocaleString('es-CL')} (IVA Incl.)`, 15, y); y += 20;
+    doc.text(`INVERSIÓN TOTAL: ${formatCLP(currentCost.total * 1.19)} (IVA Incl.)`, 15, y); y += 30;
 
-    // Firmas de Ingeniería
-    doc.setFontSize(9);
-    doc.setDrawColor(200, 200, 200);
-    doc.line(15, y, 75, y);
-    doc.line(135, y, 195, y);
-    y += 5;
-    doc.text("Ricardo S.", 45, y, { align: "center" });
-    doc.text("Michael Seura", 165, y, { align: "center" });
-    y += 4;
+    doc.setFontSize(8);
     doc.setFont("helvetica", "italic");
-    doc.text("Ingeniero Calculista", 45, y, { align: "center" });
-    doc.text("Director de Ingeniería", 165, y, { align: "center" });
+    doc.text("Este documento representa una cubicación técnica preliminar bajo normativa NCh 170.", 105, 280, { align: "center" });
+    doc.text("Validado por Departamento Técnico Obra Go.", 105, 285, { align: "center" });
+
+    // HOJA 2: ANÁLISIS DE PRECIOS UNITARIOS (APU)
+    doc.addPage();
+    addWatermark(doc);
+    doc.setTextColor(15, 17, 21);
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    doc.text("ANÁLISIS DE PRECIOS UNITARIOS (APU)", 15, 20);
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Partida: ${SYSTEMS_CATALOG.find(s => s.id === selectedSystemId)?.name}`, 15, 28);
+    
+    const materiales = currentMaterials.filter(m => !m.id.startsWith('serv_') && !m.id.startsWith('acab_'));
+    const equipos = currentMaterials.filter(m => m.id.startsWith('serv_') || m.id.startsWith('acab_'));
+
+    const apuRows = [
+        ...materiales.map(m => [m.name, 'Material', m.unit, m.quantity.toFixed(2), formatCLP(m.price), formatCLP(m.total)]),
+        ['MANO DE OBRA ESPECIALIZADA', 'M. Obra', 'GL', '1.00', formatCLP(currentCost.labor), formatCLP(currentCost.labor)],
+        ...equipos.map(e => [e.name, 'Eq/Serv', e.unit, e.quantity.toFixed(2), formatCLP(e.price), formatCLP(e.total)])
+    ];
+
+    doc.autoTable({
+        startY: 35,
+        head: [['RECURSO', 'TIPO', 'UNID.', 'CANT.', 'P. UNIT', 'TOTAL']],
+        body: apuRows,
+        theme: 'striped',
+        margin: { top: 35 },
+        headStyles: { fillColor: [60, 60, 60] },
+        styles: { fontSize: 8 }
+    });
+
+    y = (doc as any).lastAutoTable.finalY + 10;
+    
+    const summaryData = [
+        ['COSTO DIRECTO (CD)', formatCLP(currentCost.materials + currentCost.labor)],
+        ['GASTOS GENERALES (12%)', formatCLP(currentCost.gg)],
+        ['UTILIDAD (15%)', formatCLP(currentCost.profit)],
+        ['TOTAL NETO', formatCLP(currentCost.total)]
+    ];
+
+    doc.autoTable({
+        startY: y,
+        body: summaryData,
+        theme: 'plain',
+        margin: { left: 120 },
+        styles: { fontSize: 9, fontStyle: 'bold', halign: 'right' },
+        columnStyles: { 0: { cellWidth: 50 }, 1: { cellWidth: 30 } }
+    });
 
     // QR Verification (Simulado)
     const qrX = 175;
     const qrY = 260;
     doc.setDrawColor(0);
-    doc.rect(qrX, qrY, 20, 20); // Border
-    // Dibuja un patrón de QR simple (puntos)
+    doc.rect(qrX, qrY, 20, 20);
     for(let i=0; i<5; i++) {
         for(let j=0; j<5; j++) {
             if((i+j) % 2 === 0) doc.rect(qrX + (i*4), qrY + (j*4), 2, 2, 'F');
         }
     }
     doc.setFontSize(6);
-    doc.text("VERIFICACIÓN AEC", qrX + 10, qrY + 23, { align: "center" });
+    doc.text("VERIFICACIÓN OBRA GO", qrX + 10, qrY + 23, { align: "center" });
 
-    doc.save(`ObraGo_Elite_${projectNameInput}.pdf`);
+    doc.save(`ObraGo_V4_${projectNameInput.replace(/\s+/g, '_')}.pdf`);
   };
 
   return (
@@ -372,14 +413,13 @@ export default function Scanner() {
         {step === 'config' && (
           <div className="py-8 space-y-8 animate-in fade-in duration-500">
             <header className="space-y-2">
-                <h2 className="text-4xl font-black tracking-tighter uppercase italic leading-none">Input De<br /><span className="text-primary text-5xl">Ingeniería</span></h2>
+                <h2 className="text-4xl font-black tracking-tighter uppercase italic leading-none text-white">Input de <span className="text-primary">Obra Go</span></h2>
                 <p className="text-xs font-bold text-white/40 uppercase tracking-widest flex items-center gap-2">
-                    <Zap className="w-3 h-3 text-primary" /> Configuración Obligatoria Pre-Cámara
+                    <Zap className="w-3 h-3 text-primary" /> Configuración Profesional de Proyecto
                 </p>
             </header>
 
             <div className="space-y-6">
-                {/* Nombre Proyecto */}
                 <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase text-white/40">Nombre del Proyecto</label>
                     <input
@@ -391,7 +431,6 @@ export default function Scanner() {
                     />
                 </div>
 
-                {/* Categoría & Partida */}
                 <div className="grid grid-cols-1 gap-4">
                     <div className="space-y-2">
                         <label className="text-[10px] font-black uppercase text-white/40"><Boxes className="w-3 h-3 inline mr-2"/> Categoría</label>
@@ -419,7 +458,6 @@ export default function Scanner() {
                     )}
                 </div>
 
-                {/* Dimensiones Mandatorias */}
                 <div className="bg-primary/5 border border-primary/20 p-6 rounded-[32px] space-y-6">
                     <h3 className="text-xs font-black uppercase tracking-widest text-primary italic">Dimensiones de Ingeniería</h3>
                     <div className="grid grid-cols-2 gap-4">
@@ -453,7 +491,6 @@ export default function Scanner() {
                     </div>
                 </div>
 
-                {/* Proyecto Info (Ubicación) */}
                 <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                         <label className="text-[10px] font-black uppercase text-white/40">Región</label>
@@ -529,12 +566,11 @@ export default function Scanner() {
         {step === 'dosage_config' && (
             <div className="py-8 space-y-8 animate-in slide-in-from-right duration-500">
                 <header className="space-y-2 text-center">
-                    <h2 className="text-3xl font-black tracking-tighter uppercase italic leading-none text-primary">Dosificación <span className="text-white">Elite</span></h2>
-                    <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest italic">Personalización Técnica de Mezcla</p>
+                    <h2 className="text-3xl font-black tracking-tighter uppercase italic leading-none text-primary">Dosificación <span className="text-white">Obra Go</span></h2>
+                    <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest italic">Ajuste Técnico Normativo</p>
                 </header>
 
                 <div className="space-y-6">
-                    {/* Resistencia */}
                     <div className="space-y-3">
                         <label className="text-[10px] font-black uppercase text-white/40 flex items-center gap-2 px-2"><Settings2 className="w-3 h-3" /> Resistencia Hormigón (Norma NCh 170)</label>
                         <div className="grid grid-cols-3 gap-3">
@@ -550,7 +586,6 @@ export default function Scanner() {
                         </div>
                     </div>
 
-                    {/* Variación de Colocación NCh 170 */}
                     <div className="space-y-3">
                         <label className="text-[10px] font-black uppercase text-white/40 flex items-center gap-2 px-2"><Zap className="w-3 h-3" /> Variación de Colocación (Hormigonado)</label>
                         <div className="grid grid-cols-2 gap-3">
@@ -570,7 +605,6 @@ export default function Scanner() {
                         </div>
                     </div>
 
-                    {/* Tiempo de Secado */}
                     <div className="space-y-3">
                         <label className="text-[10px] font-black uppercase text-white/40 flex items-center gap-2 px-2"><RotateCcw className="w-3 h-3" /> Requerimiento de Curado</label>
                         <div className="grid grid-cols-2 gap-3">
@@ -587,7 +621,6 @@ export default function Scanner() {
                         </div>
                     </div>
 
-                    {/* Armadura */}
                     <div className="space-y-3">
                         <label className="text-[10px] font-black uppercase text-white/40 flex items-center gap-2 px-2"><Boxes className="w-3 h-3" /> Sistema de Armadura</label>
                         <div className="space-y-3">
@@ -635,7 +668,6 @@ export default function Scanner() {
                         </div>
                     </div>
 
-                    {/* Mezclado */}
                     <div className="space-y-3">
                         <label className="text-[10px] font-black uppercase text-white/40 flex items-center gap-2 px-2"><Lucide.Truck className="w-3 h-3" /> Logística de Mezclado</label>
                         <div className="grid grid-cols-2 gap-3">
@@ -652,7 +684,6 @@ export default function Scanner() {
                         </div>
                     </div>
 
-                    {/* Vaciado */}
                     <div className="space-y-3">
                         <label className="text-[10px] font-black uppercase text-white/40 flex items-center gap-2 px-2"><Lucide.ArrowDownCircle className="w-3 h-3" /> Método de Vaciado</label>
                         <div className="grid grid-cols-3 gap-2">
@@ -668,31 +699,6 @@ export default function Scanner() {
                         </div>
                     </div>
 
-                    {/* Aditivos */}
-                    <div className="space-y-3">
-                        <label className="text-[10px] font-black uppercase text-white/40 flex items-center gap-2 px-2"><Lucide.FlaskConical className="w-3 h-3" /> Aditivos Especiales</label>
-                        <div className="grid grid-cols-3 gap-2">
-                            {[
-                                { id: 'impermeabilizante', label: 'Impermeab.' },
-                                { id: 'fibra', label: 'Fibras' },
-                                { id: 'retardante', label: 'Retardante' }
-                            ].map(a => (
-                                <button
-                                    key={a.id}
-                                    onClick={() => {
-                                        const current = dosage.aditivos || [];
-                                        const next = current.includes(a.id) ? current.filter(x => x !== a.id) : [...current, a.id];
-                                        setDosage({...dosage, aditivos: next});
-                                    }}
-                                    className={`p-3 rounded-xl border text-[9px] font-black transition-all ${(dosage.aditivos || []).includes(a.id) ? 'bg-primary border-primary text-black' : 'bg-white/5 border-white/10 text-white/60'}`}
-                                >
-                                    {a.label}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Acabado */}
                     <div className="space-y-3">
                         <label className="text-[10px] font-black uppercase text-white/40 flex items-center gap-2 px-2"><Lucide.Layers className="w-3 h-3" /> Acabado de Superficie</label>
                         <div className="grid grid-cols-3 gap-2">
@@ -723,20 +729,14 @@ export default function Scanner() {
           <div className="space-y-8 animate-in slide-in-from-bottom duration-700 py-8 pb-32">
             <header className="flex justify-between items-end">
                 <div className="space-y-1">
-                    <h2 className="text-3xl font-black italic tracking-tighter uppercase text-primary">Reporte <span className="text-white">Elite</span></h2>
+                    <h2 className="text-3xl font-black italic tracking-tighter uppercase text-primary">Reporte <span className="text-white">Obra Go</span></h2>
                     <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest italic">{projectNameInput}</p>
                 </div>
-                <div className="flex flex-col items-end gap-2">
-                    {previewImage && (
-                        <div className="w-12 h-12 rounded-xl overflow-hidden border border-white/10 shadow-lg">
-                            <img src={previewImage} className="w-full h-full object-cover" alt="Contexto" />
-                        </div>
-                    )}
-                    <div className="px-3 py-1 bg-primary/10 border border-primary/30 rounded-full flex items-center gap-2">
-                        <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
-                        <span className="text-[8px] font-black text-primary uppercase">Validado por AEC</span>
+                {previewImage && (
+                    <div className="w-12 h-12 rounded-xl overflow-hidden border border-white/10 shadow-lg">
+                        <img src={previewImage} className="w-full h-full object-cover" alt="Contexto" />
                     </div>
-                </div>
+                )}
             </header>
 
             <div className="bg-white/5 border border-white/10 rounded-[40px] p-8 space-y-6">
@@ -745,9 +745,9 @@ export default function Scanner() {
                         <p className="text-[8px] font-black text-white/30 uppercase mb-1">Volumen Cubicada</p>
                         <p className="text-xl font-black text-white">{currentCost.volume.toFixed(2)} m³</p>
                     </div>
-                    <div className="text-right">
-                        <p className="text-[8px] font-black text-white/30 uppercase mb-1">Armadura Base</p>
-                        <p className="text-xl font-black text-primary">{dosage.armaduraTipo === 'ACMA' ? 'Malla C' : 'Fierro'}</p>
+                    <div className="px-3 py-1 bg-primary/10 border border-primary/30 rounded-full flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
+                        <span className="text-[8px] font-black text-primary uppercase">Validado Obra Go</span>
                     </div>
                 </div>
 
@@ -808,7 +808,7 @@ export default function Scanner() {
                 <div className="flex items-center gap-4">
                     <AlertCircle className="w-6 h-6 text-primary shrink-0" />
                     <p className="text-[10px] font-bold text-white leading-relaxed">
-                        Este reporte es el cálculo preliminar de ingeniería. Para certificar esta cubicación con firma y timbre profesional, utiliza el botón de <span className="text-primary font-black">Descargar PDF</span>.
+                        Este reporte es el cálculo de ingeniería Obra Go. Para certificar esta cubicación con firma oficial, utiliza el botón de <span className="text-primary font-black">Descargar PDF</span>.
                     </p>
                 </div>
                 <div className="flex flex-col items-center border-l border-primary/20 pl-4 shrink-0">
@@ -816,8 +816,6 @@ export default function Scanner() {
                     <p className="text-[7px] font-black text-primary uppercase tracking-widest">Norma NCh 170</p>
                 </div>
             </div>
-            
-            <AdSenseSlot id="results-bottom" />
           </div>
         )}
       </main>
@@ -833,29 +831,17 @@ export default function Scanner() {
         }}
       />
 
-      {/* Paywall Modal (Solo en Descarga PDF) */}
       <AnimatePresence>
         {showPaywall && (
           <div className="fixed inset-0 z-[1000] flex items-center justify-center p-6 bg-black/95 backdrop-blur-2xl">
             <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-sm bg-slate-900 border border-primary/20 rounded-[48px] p-10 text-center">
               <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6"><FileText className="w-10 h-10 text-primary" /></div>
-              <h3 className="text-2xl font-black tracking-tighter uppercase text-white mb-2 italic">Exportar Memoria<br /><span className="text-primary">Técnica Profesional</span></h3>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-8">PDF Certificado con validez para bancos, constructoras y compras en retail.</p>
+              <h3 className="text-2xl font-black tracking-tighter uppercase text-white mb-2 italic">Exportar Memoria<br /><span className="text-primary">Técnica Obra Go</span></h3>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-8">PDF Certificado con validez profesional para compras y consultoría.</p>
               <div className="text-5xl font-black text-white mb-2">$2.990</div>
-              <p className="text-[8px] font-black text-primary/60 uppercase tracking-widest mb-8">Acceso de por vida a este reporte</p>
+              <p className="text-[8px] font-black text-primary/60 uppercase tracking-widest mb-8">Acceso permanente a este reporte</p>
               <Button onClick={exportPDF} className="w-full h-16 rounded-[28px] bg-primary text-black font-black uppercase shadow-2xl shadow-primary/20">Desbloquear Ahora</Button>
-              <button onClick={() => setShowPaywall(false)} className="mt-6 text-[10px] font-black text-white/20 uppercase hover:text-white transition-colors">Volver al Reporte Gratis</button>
-            </motion.div>
-          </div>
-        )}
-
-        {showRegisterModal && (
-          <div className="fixed inset-0 z-[1100] flex items-center justify-center p-6 bg-black/95 backdrop-blur-2xl">
-            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-sm bg-slate-900 border border-primary/20 rounded-[48px] p-10 text-center shadow-2xl">
-              <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6"><Lucide.UserPlus className="w-10 h-10 text-primary" /></div>
-              <h3 className="text-2xl font-black tracking-tighter uppercase text-white mb-2 italic underline decoration-primary">Portal Ingeniería</h3>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-8 text-center">Registra tu firma profesional para guardar proyectos y exportar PDFs ilimitados.</p>
-              <Button onClick={() => navigate('/register')} className="w-full h-14 rounded-2xl bg-primary text-black font-black uppercase tracking-tighter">Crear Cuenta AEC</Button>
+              <button onClick={() => setShowPaywall(false)} className="mt-6 text-[10px] font-black text-white/20 uppercase hover:text-white transition-colors">Volver al Reporte</button>
             </motion.div>
           </div>
         )}

@@ -24,5 +24,17 @@ export default defineConfig({
         changeOrigin: true
       }
     }
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor': ['react', 'react-dom', 'react-router-dom', 'framer-motion'],
+          'ui': ['lucide-react', 'chart.js', 'jspdf', 'jspdf-autotable'],
+          'utils': ['dompurify']
+        }
+      }
+    },
+    chunkSizeWarningLimit: 1000
   }
 })
