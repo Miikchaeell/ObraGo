@@ -30,31 +30,39 @@ export interface CostBreakdown {
 export const calculateGeometricData = (dims: Dimensions, systemId: string | null) => {
   const { largo, ancho, espesor, alto } = dims;
   const sys = SYSTEMS_CATALOG.find(s => s.id === systemId);
-  const area = (sys?.id === "tabique_st") ? largo * alto : largo * ancho;
+  
+  // Lógica de área según categoría/sistema
+  let area = largo * ancho;
+  if (sys?.baseUnit === 'mt' || sys?.baseUnit === 'm') area = largo;
+  if (sys?.category === 'Estructuras' || sys?.category === 'Tabiquería' || sys?.name.toLowerCase().includes("muro")) {
+    area = largo * alto;
+  }
+  
   return { area, volume: area * espesor };
 };
 
 export const calculateMaterialQuantities = (
   systemId: string | null, 
   dims: Dimensions,
-  prices: Record<string, number>
+  prices: Record<string, number>,
+  wasteMargin: number = 0 // Recibimos el margen del usuario (0.05, 0.10, 0.15)
 ): MaterialLine[] => {
   if (!systemId) return [];
   const system = SYSTEMS_CATALOG.find(s => s.id === systemId);
   if (!system) return [];
 
   const { area, volume } = calculateGeometricData(dims, systemId);
-  const base = system.baseUnit === 'm2' ? area : volume;
+  const base = system.baseUnit === 'm2' ? area : (system.baseUnit === 'mt' || system.baseUnit === 'm' ? area : volume);
 
   return system.materialIds.map(mid => {
     const mat = MATERIALS_CATALOG.find(m => m.id === mid);
     if (!mat) return null;
 
-    const isHormigon = mat.name.toLowerCase().includes("hormigón") || mat.name.toLowerCase().includes("arena");
-    const isMalla = mat.name.toLowerCase().includes("malla") || mat.name.toLowerCase().includes("acma");
-    const factor = isHormigon ? 1.07 : isMalla ? 1.10 : 1.0;
+    // Lógica dinámica de margen (NCh + Selección Usuario)
+    const safetyFactor = 1 + wasteMargin; // El sistema agrega el % elegido por el ingeniero
     
-    const qty = base * mat.coverage * factor;
+    // Cantidad base + Factor de pérdida de obra real
+    const qty = base * mat.coverage * safetyFactor;
     const price = prices[mat.id] || mat.refPrice;
 
     return {
@@ -75,7 +83,7 @@ export const calculateTotalCost = (
   dims: Dimensions,
   materials: MaterialLine[]
 ): CostBreakdown => {
-  if (!dims.espesor || dims.espesor <= 0) {
+  if (!dims.largo || dims.largo <= 0) {
     return { materials: 0, labor: 0, costoDirecto: 0, gg: 0, profit: 0, total: 0 };
   }
 
@@ -83,7 +91,10 @@ export const calculateTotalCost = (
   const { area, volume } = calculateGeometricData(dims, systemId);
   const sys = SYSTEMS_CATALOG.find(s => s.id === systemId);
   
-  const labor = Math.round((sys?.baseUnit === 'm2' ? area : volume) * (sys?.laborRate || 0));
+  // Valor unitario base según unidad del sistema
+  const baseValue = sys?.baseUnit === 'm2' ? area : (sys?.baseUnit === 'mt' || sys?.baseUnit === 'm' ? area : volume);
+  
+  const labor = Math.round(baseValue * (sys?.laborRate || 0));
   const direct = matTotal + labor;
   const gg = direct * 0.12; 
   const profit = (direct + gg) * 0.15;

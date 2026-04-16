@@ -38,8 +38,7 @@ const ProtectedRoute = ({ children, allowGuest = false }: { children: React.Reac
 
 function App() {
   return (
-    <>
-      <h1 className="absolute top-0 left-0 z-[9999] bg-red-600 text-white p-2">OBRA GO VIVA</h1>
+    <div className="min-h-screen bg-[#0f1115] selection:bg-primary selection:text-black">
       <AuthProvider>
         <Router>
           <Routes>
@@ -62,7 +61,7 @@ function App() {
         <SupportWidget />
         </Router>
       </AuthProvider>
-    </>
+    </div>
   );
 }
 
