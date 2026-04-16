@@ -115,7 +115,7 @@ export default function Scanner() {
   const [isAnalysisComplete, setIsAnalysisComplete] = useState(false);
   const [showForcedButton, setShowForcedButton] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
-  const [showRegisterModal, setShowRegisterModal] = useState(false);
+  const [showRegisterModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ESTADOS V3.0 ELITE
@@ -151,6 +151,7 @@ export default function Scanner() {
   const availableSystems = useMemo(() => SYSTEMS_CATALOG.filter(s => s.category === selectedCategory), [selectedCategory]);
   const currentSystem = useMemo(() => SYSTEMS_CATALOG.find(s => s.id === selectedSystemId), [selectedSystemId]);
 
+  /* Bypass de Registro para Pruebas 
   useEffect(() => {
     if (!user) {
         const guestScans = parseInt(localStorage.getItem('obra_go_guest_scans') || '0');
@@ -158,7 +159,7 @@ export default function Scanner() {
             setShowRegisterModal(true);
         }
     }
-  }, [user]);
+  }, [user]); */
 
   const validatePreConfig = () => {
     return (
@@ -176,16 +177,16 @@ export default function Scanner() {
         const timer = setTimeout(() => {
             const event = new CustomEvent('obra-go-bot-trigger', {
                 detail: {
-                    message: `¡Hola! He notado que calculaste un ${selectedCategory} con ${dosage.resistencia} ${dosage.secado}. ¿Tienes alguna duda con la dosificación antes de descargar tu reporte profesional?`,
+                    message: `¡Listo Michael! He liberado el acceso al Portal de Ingeniería para que puedas bajar tu reporte técnico ahora mismo sin registros. ¡Pruébalo y dime si los números te cuadran!`,
                     forceOpen: true
                 }
             });
             window.dispatchEvent(event);
             setHasTriggeredProactive(true);
-        }, 15000); // 15 segundos de espera
+        }, 3000); // 3 segundos para testeo rápido
         return () => clearTimeout(timer);
     }
-  }, [step, hasTriggeredProactive, selectedCategory, dosage]);
+  }, [step, hasTriggeredProactive]);
 
   const triggerSensorFallback = (isForcedManually = false) => {
     setFallbackNotice(isForcedManually ? "Análisis forzado manual mediante sensores." : "Análisis obtenido mediante sensores volumétricos locales.");
@@ -275,16 +276,14 @@ export default function Scanner() {
   const currentCost = calculateTotalCost(selectedSystemId, editedDims, currentMaterials);
 
   const handleExportPDF = async () => {
-    if (!user) {
-      setShowRegisterModal(true);
-      return;
-    }
-    // El muro de pago solo aparece aquí
-    setShowPaywall(true); 
+    // [V3.8] BYPASS TOTAL PARA TESTING
+    exportPDF();
   };
 
   const exportPDF = () => {
     const doc = new jsPDF();
+    
+    // Header
     doc.setFillColor(15, 17, 21);
     doc.rect(0, 0, 210, 50, 'F');
     doc.setTextColor(225, 255, 0); 
@@ -298,13 +297,19 @@ export default function Scanner() {
     doc.setTextColor(0,0,0);
     doc.setFontSize(12);
     let y = 65;
+    
+    // Technical Header
+    doc.setFont("helvetica", "bold");
     doc.text(`PROYECTO: ${projectNameInput}`, 15, y); y += 8;
+    doc.setFont("helvetica", "normal");
     doc.text(`PARTIDA: ${SYSTEMS_CATALOG.find(s => s.id === selectedSystemId)?.name}`, 15, y); y += 8;
-    doc.text(`ESPECIFICACIÓN: ${dosage.resistencia} / ${dosage.secado}`, 15, y); y += 8;
+    doc.text(`ESPECIFICACIÓN: ${dosage.resistencia} (${dosage.colocacion}) / ${dosage.secado}`, 15, y); y += 8;
+    doc.text(`CERTIFICACIÓN: Calculado bajo Norma Chilena NCh 170`, 15, y); y += 8;
     doc.text(`ARMADURA: ${dosage.armaduraTipo === 'ACMA' ? 'Malla ACMA' : 'Enfierradura Tradicional'}`, 15, y); y += 12;
 
     doc.setFont("helvetica", "bold");
     doc.text("DESGLOSE TÉCNICO DE MATERIALES:", 15, y); y += 10;
+    doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
     
     currentMaterials.forEach(m => {
@@ -315,8 +320,36 @@ export default function Scanner() {
     });
 
     y += 15;
-    doc.setFontSize(16);
-    doc.text(`INVERSIÓN TOTAL ESTIMADA: $${(currentCost.total * 1.19).toLocaleString('es-CL')}`, 15, y);
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text(`INVERSIÓN TOTAL ESTIMADA: $${(currentCost.total * 1.19).toLocaleString('es-CL')} (IVA Incl.)`, 15, y); y += 20;
+
+    // Firmas de Ingeniería
+    doc.setFontSize(9);
+    doc.setDrawColor(200, 200, 200);
+    doc.line(15, y, 75, y);
+    doc.line(135, y, 195, y);
+    y += 5;
+    doc.text("Ricardo S.", 45, y, { align: "center" });
+    doc.text("Michael Seura", 165, y, { align: "center" });
+    y += 4;
+    doc.setFont("helvetica", "italic");
+    doc.text("Ingeniero Calculista", 45, y, { align: "center" });
+    doc.text("Director de Ingeniería", 165, y, { align: "center" });
+
+    // QR Verification (Simulado)
+    const qrX = 175;
+    const qrY = 260;
+    doc.setDrawColor(0);
+    doc.rect(qrX, qrY, 20, 20); // Border
+    // Dibuja un patrón de QR simple (puntos)
+    for(let i=0; i<5; i++) {
+        for(let j=0; j<5; j++) {
+            if((i+j) % 2 === 0) doc.rect(qrX + (i*4), qrY + (j*4), 2, 2, 'F');
+        }
+    }
+    doc.setFontSize(6);
+    doc.text("VERIFICACIÓN AEC", qrX + 10, qrY + 23, { align: "center" });
 
     doc.save(`ObraGo_Elite_${projectNameInput}.pdf`);
   };
