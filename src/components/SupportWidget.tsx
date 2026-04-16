@@ -1,9 +1,11 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageSquare, X, Send, Bot, Loader2 } from 'lucide-react';
 import { Button } from './ui/button';
 
-// [v3.1] Support AI Elite - Proactive & Context Aware
+// [v3.4] Support AI Elite - Roulette of Engineers & Protocolo "Identity Pro"
+const ENGINEERS = ['Ricardo', 'Danitza', 'Michael', 'Cristopher', 'Francisco'];
+
 interface SupportWidgetProps {
   metadata?: {
     projectName: string;
@@ -16,9 +18,23 @@ interface SupportWidgetProps {
 
 export const SupportWidget: React.FC<SupportWidgetProps> = ({ metadata }) => {
   const [isOpen, setIsOpen] = useState(false);
+  
+  // Persistencia del Ingeniero asignado
+  const assignedEngineer = useMemo(() => {
+    const saved = localStorage.getItem('obrago_assigned_engineer');
+    if (saved && ENGINEERS.includes(saved)) return saved;
+    const random = ENGINEERS[Math.floor(Math.random() * ENGINEERS.length)];
+    localStorage.setItem('obrago_assigned_engineer', random);
+    return random;
+  }, []);
+
   const [messages, setMessages] = useState<{ role: 'user' | 'bot'; content: string }[]>([
-    { role: 'bot', content: '¡Hola! Soy el Ingeniero de Soporte de Obra Go. Estamos actualizando el sistema para incluir dosificaciones profesionales como R-7 y enfierradura. Tu reporte gratis estará disponible en minutos. ¿En qué puedo ayudarte sobre tu cálculo técnico?' }
+    { 
+        role: 'bot', 
+        content: `Hola, soy ${assignedEngineer}, Ingeniero de Soporte de Obra Go. Estamos actualizando el sistema para incluir dosificaciones profesionales como R-7 y enfierradura. ¿En qué puedo ayudarte sobre tu cálculo técnico hoy?` 
+    }
   ]);
+
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -29,17 +45,18 @@ export const SupportWidget: React.FC<SupportWidgetProps> = ({ metadata }) => {
     }
   }, [messages, isOpen]);
 
-  // Manejador de eventos para mensajes proactivos desde el sistema
   useEffect(() => {
     const handleTrigger = (e: any) => {
       const { message, forceOpen } = e.detail;
       setIsOpen(forceOpen || true);
-      setMessages(prev => [...prev, { role: 'bot', content: message }]);
+      // Personalizamos el mensaje proactivo con la identidad del ingeniero
+      const personalizedMessage = message.replace('¡Hola!', `Hola, soy ${assignedEngineer}.`);
+      setMessages(prev => [...prev, { role: 'bot', content: personalizedMessage }]);
     };
 
     window.addEventListener('obra-go-bot-trigger', handleTrigger);
     return () => window.removeEventListener('obra-go-bot-trigger', handleTrigger);
-  }, []);
+  }, [assignedEngineer]);
 
   const handleSendMessage = async (forcedMessage?: string) => {
     const userMessage = forcedMessage || input.trim();
@@ -58,7 +75,10 @@ export const SupportWidget: React.FC<SupportWidgetProps> = ({ metadata }) => {
         body: JSON.stringify({
           message: userMessage,
           history: messages.map(m => ({ role: m.role === 'bot' ? 'assistant' : 'user', content: m.content })),
-          metadata: metadata // Inyectamos el contexto de ingeniería
+          metadata: {
+            ...metadata,
+            assignedEngineer // Enviamos el nombre para que la IA lo use
+          }
         })
       });
       const data = await res.json();
@@ -87,10 +107,10 @@ export const SupportWidget: React.FC<SupportWidgetProps> = ({ metadata }) => {
                   <Bot className="w-6 h-6 text-primary" />
                 </div>
                 <div>
-                  <h4 className="text-black font-black uppercase text-xs tracking-tighter">Consultoría Elite</h4>
+                  <h4 className="text-black font-black uppercase text-[10px] tracking-tighter">Soporte: {assignedEngineer}</h4>
                   <div className="flex items-center gap-1.5">
                     <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
-                    <span className="text-[8px] font-bold text-black/60 uppercase tracking-widest">En Línea • Experto AEC</span>
+                    <span className="text-[8px] font-bold text-black/60 uppercase tracking-widest">En Línea • Ingeniero AEC</span>
                   </div>
                 </div>
               </div>
@@ -121,12 +141,16 @@ export const SupportWidget: React.FC<SupportWidgetProps> = ({ metadata }) => {
                       : 'bg-primary text-black font-bold rounded-tr-none'
                   }`}>
                     {m.content}
-                    {m.content.includes('/api/checkout') && (
+                    {(m.content.includes('/api/checkout') || m.content.toLowerCase().includes('webpay')) && (
                         <button 
-                            onClick={() => window.location.href = m.content.match(/https?:\/\/[^\s]*/)?.[0] || '#'}
+                            onClick={() => {
+                                const payButton = document.getElementById('main-pay-button');
+                                if (payButton) payButton.click();
+                                else window.location.href = 'https://obrascan.vercel.app/api/checkout/pdf';
+                            }}
                             className="block mt-3 bg-black text-primary p-2 rounded-lg font-black uppercase text-[9px] text-center w-full"
                         >
-                            Proceder al Pago Seguro →
+                            Ir a Webpay Seguro →
                         </button>
                     )}
                   </div>
@@ -136,7 +160,7 @@ export const SupportWidget: React.FC<SupportWidgetProps> = ({ metadata }) => {
                 <div className="flex justify-start">
                   <div className="bg-white/5 p-4 rounded-2xl rounded-tl-none flex items-center gap-2">
                     <Loader2 className="w-4 h-4 text-primary animate-spin" />
-                    <span className="text-[9px] font-black uppercase text-primary/60 tracking-widest">Aistente Analizando Obra...</span>
+                    <span className="text-[9px] font-black uppercase text-primary/60 tracking-widest">{assignedEngineer} está analizando...</span>
                   </div>
                 </div>
               )}
@@ -150,7 +174,7 @@ export const SupportWidget: React.FC<SupportWidgetProps> = ({ metadata }) => {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                  placeholder="Duda técnica o sobre el pago..."
+                  placeholder="Escribe tu consulta..."
                   className="flex-1 bg-transparent px-2 text-xs font-bold text-white outline-none placeholder:text-slate-600"
                   aria-label="Mensaje para el bot"
                 />
@@ -174,9 +198,10 @@ export const SupportWidget: React.FC<SupportWidgetProps> = ({ metadata }) => {
         onClick={() => setIsOpen(!isOpen)}
         className="relative group h-16 px-6 bg-primary hover:bg-white text-black rounded-full shadow-2xl shadow-primary/40 flex items-center gap-3 border border-black/10 transition-colors"
       >
-        <span className="text-xs font-black uppercase tracking-tighter items-center hidden md:block">
-          Ingeniería Live
-        </span>
+        <div className="flex flex-col items-start mr-2 hidden md:flex">
+            <span className="text-[8px] font-black uppercase opacity-60 tracking-tighter">Soporte AEC</span>
+            <span className="text-[10px] font-black uppercase tracking-tighter">{assignedEngineer}</span>
+        </div>
         <MessageSquare className="w-6 h-6" />
         <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-black flex items-center justify-center">
             <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />

@@ -28,6 +28,15 @@ import { SYSTEMS_CATALOG } from "@/constants/catalog";
 import { useAuth } from "@/context/AuthContext";
 import { REGIONS_CHILE } from "@/data/chile";
 
+const formatCLP = (val: number) => {
+  return new Intl.NumberFormat('es-CL', {
+    style: 'currency',
+    currency: 'CLP',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(Math.round(val));
+};
+
 const compressImage = (file: File, maxWidth = 1024, maxHeight = 1024): Promise<Blob> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -602,7 +611,7 @@ export default function Scanner() {
                 <div className="flex justify-between items-center bg-black/50 p-4 rounded-2xl border border-white/5">
                     <div>
                         <p className="text-[8px] font-black text-white/30 uppercase mb-1">Volumen Cubicada</p>
-                        <p className="text-xl font-black text-white">{(editedDims.largo * editedDims.ancho * editedDims.espesor).toFixed(2)} m³</p>
+                        <p className="text-xl font-black text-white">{currentCost.volume.toFixed(2)} m³</p>
                     </div>
                     <div className="text-right">
                         <p className="text-[8px] font-black text-white/30 uppercase mb-1">Armadura Base</p>
@@ -622,7 +631,7 @@ export default function Scanner() {
                                     <p className="text-[9px] font-bold text-white/40 italic">{m.quantity.toFixed(2)} {m.unit} • Rendimiento Real</p>
                                 </div>
                                 <div className="text-right">
-                                    <p className="text-sm font-black text-white">${m.total.toLocaleString('es-CL')}</p>
+                                    <p className="text-sm font-black text-white">{formatCLP(m.total)}</p>
                                     <p className="text-[8px] font-black text-white/20 uppercase">Subtotal</p>
                                 </div>
                             </div>
@@ -633,10 +642,18 @@ export default function Scanner() {
                 <div className="bg-primary p-8 rounded-[40px] text-black space-y-4 shadow-3xl shadow-primary/20">
                     <div className="flex justify-between text-[10px] font-black uppercase opacity-60 italic border-b border-black/10 pb-2">
                         <span>Presupuesto Base (Incl. {wasteMargin * 100}% Pérdida)</span>
-                        <span>${currentCost.total.toLocaleString('es-CL')}</span>
+                        <span>{formatCLP(currentCost.total)}</span>
                     </div>
-                    <div className="text-center py-2">
-                        <p className="text-6xl font-black italic tracking-tighter">${(currentCost.total * 1.19).toLocaleString('es-CL')}</p>
+                    <div className="text-center py-2 overflow-hidden">
+                        <p 
+                            className="font-black italic tracking-tighter leading-none transition-all duration-300"
+                            style={{ 
+                                fontSize: formatCLP(currentCost.total * 1.19).length > 12 ? '2.5rem' : 
+                                          formatCLP(currentCost.total * 1.19).length > 9 ? '3.5rem' : '4.5rem' 
+                            }}
+                        >
+                            {formatCLP(currentCost.total * 1.19)}
+                        </p>
                         <p className="text-[10px] font-black uppercase opacity-50 tracking-[0.2em] mt-1">Suma Total IVA Incluido</p>
                     </div>
                     <div className="flex gap-3">

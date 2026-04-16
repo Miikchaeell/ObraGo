@@ -32,19 +32,25 @@ export interface CostBreakdown {
   gg: number;
   profit: number;
   total: number;
+  volume: number; // Añadimos volumen explícito para coherencia UI
 }
 
 export const calculateGeometricData = (dims: Dimensions, systemId: string | null) => {
   const { largo, ancho, espesor, alto } = dims;
   const sys = SYSTEMS_CATALOG.find(s => s.id === systemId);
   
+  // Lógica de área según categoría/sistema
   let area = largo * ancho;
   if (sys?.baseUnit === 'mt' || sys?.baseUnit === 'm') area = largo;
   if (sys?.category === 'Estructuras' || sys?.category === 'Tabiquería' || sys?.name.toLowerCase().includes("muro")) {
     area = largo * alto;
   }
   
-  return { area, volume: area * espesor };
+  // El volumen debe ser consistente: Area * Espesor
+  // Redondeamos a 4 decimales para evitar errores de coma flotante en acumulados
+  const volume = Math.round(area * espesor * 10000) / 10000;
+  
+  return { area, volume };
 };
 
 export const calculateMaterialQuantities = (
@@ -59,9 +65,10 @@ export const calculateMaterialQuantities = (
   if (!system) return [];
 
   const { area, volume } = calculateGeometricData(dims, systemId);
+  
+  // Base de cálculo igual a baseValue para coherencia total
   const base = system.baseUnit === 'm2' ? area : (system.baseUnit === 'mt' || system.baseUnit === 'm' ? area : volume);
 
-  // Filtrar IDs base para reemplazo dinámico (Hormigón y Armadura)
   let materialIds = [...system.materialIds];
 
   if (dosage && system.category === "Obra Gruesa") {
@@ -94,7 +101,7 @@ export const calculateMaterialQuantities = (
       unit: mat.unit,
       baseQuantity: base * mat.coverage,
       quantity: qty,
-      price,
+      price: Math.round(price),
       total: Math.round(qty * price),
       category: mat.category
     };
@@ -107,7 +114,7 @@ export const calculateTotalCost = (
   materials: MaterialLine[]
 ): CostBreakdown => {
   if (!dims.largo || dims.largo <= 0) {
-    return { materials: 0, labor: 0, costoDirecto: 0, gg: 0, profit: 0, total: 0 };
+    return { materials: 0, labor: 0, costoDirecto: 0, gg: 0, profit: 0, total: 0, volume: 0 };
   }
 
   const matTotal = materials.reduce((a, m) => a + m.total, 0);
@@ -118,8 +125,8 @@ export const calculateTotalCost = (
   
   const labor = Math.round(baseValue * (sys?.laborRate || 0));
   const direct = matTotal + labor;
-  const gg = direct * 0.12; 
-  const profit = (direct + gg) * 0.15;
+  const gg = Math.round(direct * 0.12); 
+  const profit = Math.round((direct + gg) * 0.15);
 
   return { 
     materials: matTotal, 
@@ -127,6 +134,7 @@ export const calculateTotalCost = (
     costoDirecto: direct, 
     gg, 
     profit, 
-    total: Math.round(direct + gg + profit) 
+    total: Math.round(direct + gg + profit),
+    volume
   };
 };
