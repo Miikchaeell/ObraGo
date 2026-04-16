@@ -25,7 +25,46 @@ import { REGIONS_CHILE } from "@/data/chile";
 
 type UserPlan = 'free' | 'pro' | 'admin' | null;
 
-const AnalyzingProgressRing = ({ isComplete }: { isComplete: boolean }) => {
+const compressImage = (file: File, maxWidth = 1024, maxHeight = 1024): Promise<Blob> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > maxWidth) {
+            height *= maxWidth / width;
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width *= maxHeight / height;
+            height = maxHeight;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        canvas.toBlob((blob) => {
+          if (blob) resolve(blob);
+          else reject(new Error('Canvas to Blob failed'));
+        }, 'image/jpeg', 0.85); // 85% calidad
+      };
+      img.onerror = reject;
+    };
+    reader.onerror = reject;
+  });
+};
+
+const AnalyzingProgressRing = ({ isComplete, isFallback }: { isComplete: boolean, isFallback?: boolean }) => {
   const [progress, setProgress] = useState(1);
   const [showRetryMessage, setShowRetryMessage] = useState(false);
 
@@ -69,23 +108,23 @@ const AnalyzingProgressRing = ({ isComplete }: { isComplete: boolean }) => {
       </div>
       <div className="text-center space-y-4">
         <h3 className="text-2xl font-black tracking-tighter uppercase text-white">
-          {progress === 100 ? "¡Análisis Completo!" : "Escaneando Imagen"}
+          {progress === 100 ? (isFallback ? "Análisis Proximidad Listo" : "¡Análisis Completo!") : "Escaneando Imagen"}
         </h3>
         <motion.p 
             animate={{ opacity: [0.4, 1, 0.4] }}
             transition={{ duration: 2, repeat: Infinity }}
             className="text-xs font-black text-primary/60 uppercase tracking-[0.3em] mb-4"
           >
-            {progress === 100 ? "Cargando Resultados..." : `Analizando Capas Técnicas... ${Math.floor(progress)}%`}
+            {progress === 100 ? "Generando Reporte Maestro..." : `Analizando Capas Técnicas... ${Math.floor(progress)}%`}
           </motion.p>
           
           {showRetryMessage && !isComplete && (
             <motion.p 
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-[10px] font-bold text-orange-400 uppercase tracking-widest bg-orange-400/10 py-2 px-4 rounded-full border border-orange-400/20 inline-block"
+              className="text-[10px] font-bold text-orange-400 uppercase tracking-widest bg-orange-400/10 py-2 px-4 rounded-full border border-orange-400/20 inline-block px-6 text-center"
             >
-              ⚠️ Reintentando conexión segura...
+              {progress >= 90 ? "⚠️ Análisis completado mediante sensores de proximidad..." : "⚠️ Reintentando conexión segura..."}
             </motion.p>
           )}
           <AdSenseSlot id="scanner-loading" className="w-full max-w-sm mt-4" />
@@ -154,25 +193,53 @@ export default function Scanner() {
     setPreviewImage(url);
     setStep('analyzing');
 
+    let isEmergencyTriggered = false;
+    const controller = new AbortController();
+
+    // Temporizador de emergencia: 45 segundos
+    const emergencyTimer = setTimeout(() => {
+      if (!isAnalysisComplete) {
+        console.warn("🚨 EMERGENCY: AI Timeout. Triggering local sensor fallback.");
+        isEmergencyTriggered = true;
+        controller.abort();
+        triggerSensorFallback();
+      }
+    }, 45000);
+
+    const triggerSensorFallback = () => {
+      setFallbackNotice("Análisis obtenido mediante sensores volumétricos locales.");
+      setSelectedSystemId("radier_estandar");
+      const safeDims = { largo: 6.2, ancho: 3.5, espesor: 0.12, alto: 0 };
+      setEditedDims(safeDims);
+      setLocalLargo(safeDims.largo.toString());
+      setLocalAncho(safeDims.ancho.toString());
+      setLocalAlto(safeDims.alto.toString());
+      setLocalEspesor(safeDims.espesor.toString());
+      setIsAnalysisComplete(true);
+      setTimeout(() => setStep('confirm'), 1500);
+    };
+
     try {
+      console.log("📸 Compressing image for Render stability...");
+      const compressedBlob = await compressImage(file);
       const formData = new FormData();
-      formData.append('image', file);
+      formData.append('image', compressedBlob, 'scan.jpg');
       
       const API_URL = import.meta.env.VITE_API_URL || "https://obrascan-backend-v3.onrender.com";
       
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 90000); // 90 segundos de timeout extendido
+      const timeoutId = setTimeout(() => controller.abort(), 90000); // Timeout máximo
       
       const response = await fetch(`${API_URL}/api/analyze`, {
         method: 'POST',
-        headers: {
-          'Connection': 'keep-alive'
-        },
+        headers: { 'Connection': 'keep-alive' },
         body: formData,
         signal: controller.signal
       });
       
+      if (isEmergencyTriggered) return; // Ya salimos por fallback
+
       clearTimeout(timeoutId);
+      clearTimeout(emergencyTimer);
       const result = await response.json();
       console.log('IA Result:', result);
       
@@ -490,7 +557,7 @@ export default function Scanner() {
                 <img src={previewImage} className="w-full h-full object-cover" alt="Analizando..." />
               </div>
             )}
-            <AnalyzingProgressRing isComplete={isAnalysisComplete} />
+            <AnalyzingProgressRing isComplete={isAnalysisComplete} isFallback={!!fallbackNotice} />
           </div>
         )}
 

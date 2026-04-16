@@ -673,8 +673,9 @@ app.get('/api/auth/me', authenticateToken, async (req, res) => {
 // ANALYZE (AUTHENTICATION ENABLED FOR PROXY SECURITY)
 app.post('/api/analyze', authenticateToken, upload.single('image'), async (req, res) => {
   const requestId = Date.now().toString().slice(-6);
-
+  const mem = process.memoryUsage();
   console.log(`\n📥 [${new Date().toISOString()}] [ID:${requestId}] REQUEST RECIBIDO: /api/analyze`);
+  console.log(`📊 [ID:${requestId}] MEMORY: RSS: ${(mem.rss / 1024 / 1024).toFixed(2)} MB, HEAP: ${(mem.heapUsed / 1024 / 1024).toFixed(2)} MB`);
   
   try {
     if (!req.file) {
