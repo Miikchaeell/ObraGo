@@ -176,6 +176,27 @@ export default function Scanner() {
     }
   }, [user]);
 
+  const triggerSensorFallback = (isForcedManually = false) => {
+    console.log("🛠️ Inyectando Heurística de Sensores...");
+    setFallbackNotice(isForcedManually ? "Análisis forzado manual mediante sensores." : "Análisis obtenido mediante sensores volumétricos locales.");
+    setSelectedSystemId("radier_estandar");
+    
+    const safeDims = { 
+      largo: Math.max(editedDims.largo, 6.2), 
+      ancho: Math.max(editedDims.ancho, 3.5), 
+      espesor: Math.max(editedDims.espesor, 0.12), 
+      alto: 0 
+    };
+    
+    setEditedDims(safeDims);
+    setLocalLargo(safeDims.largo.toString());
+    setLocalAncho(safeDims.ancho.toString());
+    setLocalAlto(safeDims.alto.toString());
+    setLocalEspesor(safeDims.espesor.toString());
+    setIsAnalysisComplete(true);
+    setStep('confirm'); // Salto inmediato, sin timeouts.
+  };
+
   const handleImageChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -214,27 +235,6 @@ export default function Scanner() {
         setShowForcedButton(true);
       }
     }, 50000);
-
-    const triggerSensorFallback = (isForcedManually = false) => {
-      console.log("🛠️ Inyectando Heurística de Sensores...");
-      setFallbackNotice(isForcedManually ? "Análisis forzado manual mediante sensores." : "Análisis obtenido mediante sensores volumétricos locales.");
-      setSelectedSystemId("radier_estandar");
-      
-      const safeDims = { 
-        largo: Math.max(editedDims.largo, 6.2), 
-        ancho: Math.max(editedDims.ancho, 3.5), 
-        espesor: Math.max(editedDims.espesor, 0.12), 
-        alto: 0 
-      };
-      
-      setEditedDims(safeDims);
-      setLocalLargo(safeDims.largo.toString());
-      setLocalAncho(safeDims.ancho.toString());
-      setLocalAlto(safeDims.alto.toString());
-      setLocalEspesor(safeDims.espesor.toString());
-      setIsAnalysisComplete(true);
-      setStep('confirm'); // Salto inmediato, sin timeouts.
-    };
 
     try {
       console.log("📸 Compressing image for Render stability...");
