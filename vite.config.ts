@@ -28,10 +28,12 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          'vendor': ['react', 'react-dom', 'react-router-dom', 'framer-motion'],
-          'ui': ['lucide-react', 'chart.js', 'jspdf', 'jspdf-autotable'],
-          'utils': ['dompurify']
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('react') || id.includes('framer-motion')) return 'vendor';
+            if (id.includes('lucide') || id.includes('chart') || id.includes('jspdf')) return 'ui';
+            return 'libs';
+          }
         }
       }
     },

@@ -14,7 +14,6 @@ import {
   AlertCircle,
   FileText
 } from "lucide-react";
-import { AdSenseSlot } from "@/components/AdSenseSlot";
 import { Button } from "@/components/ui/button";
 import { SupportWidget } from "@/components/SupportWidget";
 import { motion, AnimatePresence } from "framer-motion";
@@ -116,7 +115,6 @@ export default function Scanner() {
   const [isAnalysisComplete, setIsAnalysisComplete] = useState(false);
   const [showForcedButton, setShowForcedButton] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
-  const [showRegisterModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ESTADOS V3.0 ELITE
