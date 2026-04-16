@@ -25,10 +25,16 @@ import { REGIONS_CHILE } from "@/data/chile";
 
 type UserPlan = 'free' | 'pro' | 'admin' | null;
 
-const AnalyzingProgressRing = () => {
+const AnalyzingProgressRing = ({ isComplete }: { isComplete: boolean }) => {
   const [progress, setProgress] = useState(1);
+  const [showRetryMessage, setShowRetryMessage] = useState(false);
 
   useEffect(() => {
+    if (isComplete) {
+      setProgress(100);
+      return;
+    }
+
     const timer = setInterval(() => {
       setProgress(prev => {
         if (prev < 40) return prev + 2; 
@@ -37,8 +43,16 @@ const AnalyzingProgressRing = () => {
         return 90;
       });
     }, 400);
-    return () => clearInterval(timer);
-  }, []);
+
+    const retryTimer = setTimeout(() => {
+      setShowRetryMessage(true);
+    }, 30000); // 30 segundos
+
+    return () => {
+      clearInterval(timer);
+      clearTimeout(retryTimer);
+    };
+  }, [isComplete]);
 
   return (
     <>
@@ -54,14 +68,26 @@ const AnalyzingProgressRing = () => {
         </div>
       </div>
       <div className="text-center space-y-4">
-        <h3 className="text-2xl font-black tracking-tighter uppercase text-white">Escaneando Imagen</h3>
+        <h3 className="text-2xl font-black tracking-tighter uppercase text-white">
+          {progress === 100 ? "¡Análisis Completo!" : "Escaneando Imagen"}
+        </h3>
         <motion.p 
             animate={{ opacity: [0.4, 1, 0.4] }}
             transition={{ duration: 2, repeat: Infinity }}
-            className="text-xs font-black text-primary/60 uppercase tracking-[0.3em] mb-8"
+            className="text-xs font-black text-primary/60 uppercase tracking-[0.3em] mb-4"
           >
-            Analizando Capas Técnicas... {Math.floor(progress)}%
+            {progress === 100 ? "Cargando Resultados..." : `Analizando Capas Técnicas... ${Math.floor(progress)}%`}
           </motion.p>
+          
+          {showRetryMessage && !isComplete && (
+            <motion.p 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-[10px] font-bold text-orange-400 uppercase tracking-widest bg-orange-400/10 py-2 px-4 rounded-full border border-orange-400/20 inline-block"
+            >
+              ⚠️ Reintentando conexión segura...
+            </motion.p>
+          )}
           <AdSenseSlot id="scanner-loading" className="w-full max-w-sm mt-4" />
       </div>
     </>
@@ -74,6 +100,7 @@ export default function Scanner() {
   const plan = rawPlan as UserPlan;
 
   const [step, setStep] = useState<'upload' | 'analyzing' | 'confirm'>('upload');
+  const [isAnalysisComplete, setIsAnalysisComplete] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
@@ -114,6 +141,7 @@ export default function Scanner() {
     if (!file) return;
 
     setIsAnalyzing(true);
+    setIsAnalysisComplete(false);
     setFallbackNotice(null);
     setLocalLargo("");
     setLocalAncho("");
@@ -149,6 +177,7 @@ export default function Scanner() {
       console.log('IA Result:', result);
       
       if (result.success) {
+        setIsAnalysisComplete(true);
         setSelectedSystemId(result.data?.sistema_id || "radier_estandar");
         
         const dim = result.data?.dimensiones || {};
@@ -173,7 +202,8 @@ export default function Scanner() {
           localStorage.setItem('obra_go_guest_scans', (guestScans + 1).toString());
         }
         
-        setStep('confirm');
+        // Pequeño delay para que el usuario vea el 100%
+        setTimeout(() => setStep('confirm'), 800);
       }
     } catch (err) {
       console.error('Error in handleImageChange:', err);
@@ -460,7 +490,7 @@ export default function Scanner() {
                 <img src={previewImage} className="w-full h-full object-cover" alt="Analizando..." />
               </div>
             )}
-            <AnalyzingProgressRing />
+            <AnalyzingProgressRing isComplete={isAnalysisComplete} />
           </div>
         )}
 
