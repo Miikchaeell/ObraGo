@@ -65,71 +65,34 @@ const compressImage = (file: File, maxWidth = 1024, maxHeight = 1024): Promise<B
 };
 
 const AnalyzingProgressRing = ({ isComplete, isFallback }: { isComplete: boolean, isFallback?: boolean }) => {
+  // Simplificado para evitar loop de renders
   const [progress, setProgress] = useState(1);
-  const [showRetryMessage, setShowRetryMessage] = useState(false);
+  const [showRetry, setShowRetry] = useState(false);
 
   useEffect(() => {
-    if (isComplete) {
-      setProgress(100);
-      return;
-    }
-
-    const timer = setInterval(() => {
-      setProgress(prev => {
-        if (prev < 40) return prev + 2; 
-        if (prev < 75) return prev + 1;
-        if (prev < 90) return prev + 0.5;
-        return 90;
-      });
-    }, 400);
-
-    const retryTimer = setTimeout(() => {
-      setShowRetryMessage(true);
-    }, 30000); // 30 segundos
-
-    return () => {
-      clearInterval(timer);
-      clearTimeout(retryTimer);
-    };
+    if (isComplete) return;
+    const t = setInterval(() => setProgress(p => p < 90 ? p + 2 : 90), 500);
+    const r = setTimeout(() => setShowRetry(true), 15000);
+    return () => { clearInterval(t); clearTimeout(r); };
   }, [isComplete]);
 
   return (
-    <>
-      <div className="relative w-56 h-56 z-10">
-        <div className="absolute inset-0 rounded-full border-[12px] border-white/5" />
-        <motion.div 
-          className="absolute inset-0 rounded-full border-[12px] border-t-primary"
-          animate={{ rotate: 360 }}
-          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-        />
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-6xl font-black text-white italic">{Math.floor(progress)}%</span>
-        </div>
+    <div className="flex flex-col items-center justify-center space-y-8">
+      <div className="relative w-48 h-48 flex items-center justify-center">
+        <Loader2 className="w-24 h-24 text-primary animate-spin" />
+        <span className="absolute text-2xl font-black italic">{isComplete ? 100 : progress}%</span>
       </div>
-      <div className="text-center space-y-4">
-        <h3 className="text-2xl font-black tracking-tighter uppercase text-white">
-          {progress === 100 ? (isFallback ? "Análisis Proximidad Listo" : "¡Análisis Completo!") : "Escaneando Imagen"}
+      <div className="text-center">
+        <h3 className="text-xl font-black uppercase text-white animate-pulse">
+          {isComplete ? "Analizado" : "Analizando Terreno..."}
         </h3>
-        <motion.p 
-            animate={{ opacity: [0.4, 1, 0.4] }}
-            transition={{ duration: 2, repeat: Infinity }}
-            className="text-xs font-black text-primary/60 uppercase tracking-[0.3em] mb-4"
-          >
-            {progress === 100 ? "Generando Reporte Maestro..." : `Analizando Capas Técnicas... ${Math.floor(progress)}%`}
-          </motion.p>
-          
-          {showRetryMessage && !isComplete && (
-            <motion.p 
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-[10px] font-bold text-orange-400 uppercase tracking-widest bg-orange-400/10 py-2 px-4 rounded-full border border-orange-400/20 inline-block px-6 text-center"
-            >
-              {progress >= 90 ? "⚠️ Análisis completado mediante sensores de proximidad..." : "⚠️ Reintentando conexión segura..."}
-            </motion.p>
-          )}
-          <AdSenseSlot id="scanner-loading" className="w-full max-w-sm mt-4" />
+        {showRetry && !isComplete && (
+          <p className="text-[10px] text-orange-400 font-bold mt-2 uppercase tracking-widest">
+            {isFallback ? "Usando Sensores Locales..." : "Optimizando Conexión..."}
+          </p>
+        )}
       </div>
-    </>
+    </div>
   );
 };
 
@@ -266,11 +229,12 @@ export default function Scanner() {
         setSelectedSystemId(result.data?.sistema_id || "radier_estandar");
         
         const dim = result.data?.dimensiones || {};
+        // HARD-CODE DE EMERGENCIA: Si las dimensiones son nulas o menores a lo ínfimo, inyecta 10m2
         const safeDims = {
-          largo: dim.largo || 0,
-          ancho: dim.ancho || 0,
+          largo: (dim.largo && dim.largo > 0) ? dim.largo : 5,
+          ancho: (dim.ancho && dim.ancho > 0) ? dim.ancho : 2,
           alto: dim.alto || 0,
-          espesor: dim.espesor || 0.1
+          espesor: (dim.espesor && dim.espesor > 0) ? dim.espesor : 0.12
         };
         
         setEditedDims(safeDims);
@@ -287,7 +251,7 @@ export default function Scanner() {
           localStorage.setItem('obra_go_guest_scans', (guestScans + 1).toString());
         }
         
-        setStep('confirm'); // Fuerza el montaje inmediato
+        setStep('confirm'); // Salto instantáneo
       }
     } catch (err) {
       console.error('Error in handleImageChange:', err);
