@@ -130,7 +130,11 @@ export default function Scanner() {
     resistencia: "H-20",
     secado: "Estándar",
     armaduraTipo: "ACMA",
-    armaduraDetalle: "malla_acma_c92"
+    armaduraDetalle: "malla_acma_c92",
+    aditivos: [],
+    vaciado: "Directa",
+    mezclado: "Planta (Mixer)",
+    acabado: "Platachado"
   });
 
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -573,6 +577,79 @@ export default function Scanner() {
                                     </div>
                                 )}
                              </div>
+                        </div>
+                    </div>
+
+                    {/* Mezclado */}
+                    <div className="space-y-3">
+                        <label className="text-[10px] font-black uppercase text-white/40 flex items-center gap-2 px-2"><Lucide.Truck className="w-3 h-3" /> Logística de Mezclado</label>
+                        <div className="grid grid-cols-2 gap-3">
+                            {["Planta (Mixer)", "Obra (Trompo)"].map(m => (
+                                <button
+                                    key={m}
+                                    onClick={() => setDosage({...dosage, mezclado: m as any})}
+                                    className={`p-4 rounded-2xl border font-black transition-all ${dosage.mezclado === m ? 'bg-primary border-primary text-black scale-105' : 'bg-white/5 border-white/10 text-white/60'}`}
+                                >
+                                    <span className="text-[10px] uppercase">{m}</span>
+                                    <span className="block text-[8px] opacity-60 uppercase">{m.includes("Planta") ? "Industrial" : "Terreno"}</span>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Vaciado */}
+                    <div className="space-y-3">
+                        <label className="text-[10px] font-black uppercase text-white/40 flex items-center gap-2 px-2"><Lucide.ArrowDownCircle className="w-3 h-3" /> Método de Vaciado</label>
+                        <div className="grid grid-cols-3 gap-2">
+                            {["Directa", "Bomba Pluma", "Bomba Estacionaria"].map(v => (
+                                <button
+                                    key={v}
+                                    onClick={() => setDosage({...dosage, vaciado: v as any})}
+                                    className={`p-3 rounded-xl border text-[9px] font-black transition-all ${dosage.vaciado === v ? 'bg-primary border-primary text-black' : 'bg-white/5 border-white/10 text-white/60'}`}
+                                >
+                                    {v}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Aditivos */}
+                    <div className="space-y-3">
+                        <label className="text-[10px] font-black uppercase text-white/40 flex items-center gap-2 px-2"><Lucide.FlaskConical className="w-3 h-3" /> Aditivos Especiales</label>
+                        <div className="grid grid-cols-3 gap-2">
+                            {[
+                                { id: 'impermeabilizante', label: 'Impermeab.' },
+                                { id: 'fibra', label: 'Fibras' },
+                                { id: 'retardante', label: 'Retardante' }
+                            ].map(a => (
+                                <button
+                                    key={a.id}
+                                    onClick={() => {
+                                        const current = dosage.aditivos || [];
+                                        const next = current.includes(a.id) ? current.filter(x => x !== a.id) : [...current, a.id];
+                                        setDosage({...dosage, aditivos: next});
+                                    }}
+                                    className={`p-3 rounded-xl border text-[9px] font-black transition-all ${(dosage.aditivos || []).includes(a.id) ? 'bg-primary border-primary text-black' : 'bg-white/5 border-white/10 text-white/60'}`}
+                                >
+                                    {a.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Acabado */}
+                    <div className="space-y-3">
+                        <label className="text-[10px] font-black uppercase text-white/40 flex items-center gap-2 px-2"><Lucide.Layers className="w-3 h-3" /> Acabado de Superficie</label>
+                        <div className="grid grid-cols-3 gap-2">
+                            {["Platachado", "Helicóptero", "Escobillado"].map(f => (
+                                <button
+                                    key={f}
+                                    onClick={() => setDosage({...dosage, acabado: f as any})}
+                                    className={`p-3 rounded-xl border text-[9px] font-black transition-all ${dosage.acabado === f ? 'bg-primary border-primary text-black' : 'bg-white/5 border-white/10 text-white/60'}`}
+                                >
+                                    {f}
+                                </button>
+                            ))}
                         </div>
                     </div>
 

@@ -54,6 +54,20 @@ export const MATERIALS_CATALOG: Material[] = [
   { id: "malla_acma_c92", name: "Malla ACMA C-92 (2.6x5m)", category: "Hormigones", unit: "un", coverage: 0.08, refPrice: 38500, tags: ["radier", "pavimento"] },
   { id: "malla_acma_c139", name: "Malla ACMA C-139 (2.6x5m)", category: "Hormigones", unit: "un", coverage: 0.08, refPrice: 52000, tags: ["radier", "losa"] },
   { id: "malla_acma_c188", name: "Malla ACMA C-188 (2.6x5m)", category: "Hormigones", unit: "un", coverage: 0.08, refPrice: 68500, tags: ["radier", "comercial"] },
+  
+  // RAW MATERIALS (MEZCLA EN OBRA)
+  { id: "arena_m3", name: "Arena Gruesa", category: "Hormigones", unit: "m3", coverage: 0.55, refPrice: 22000, tags: ["arido", "mezcla"] },
+  { id: "gravilla_m3", name: "Gravilla 3/4\"", category: "Hormigones", unit: "m3", coverage: 0.85, refPrice: 24500, tags: ["arido", "mezcla"] },
+
+  // ADITIVOS
+  { id: "adit_imper", name: "Aditivo Impermeabilizante", category: "Otros", unit: "L", coverage: 2.0, refPrice: 4500, tags: ["aditivo"] },
+  { id: "adit_fibra", name: "Fibras de Polipropileno", category: "Otros", unit: "kg", coverage: 0.6, refPrice: 8900, tags: ["aditivo"] },
+  { id: "adit_retar", name: "Aditivo Retardante", category: "Otros", unit: "L", coverage: 1.5, refPrice: 3800, tags: ["aditivo"] },
+
+  // SERVICIOS Y ACABADOS
+  { id: "serv_bomba", name: "Servicio Bomba + Operador", category: "Otros", unit: "m3", coverage: 1.0, refPrice: 15500, tags: ["servicio", "bombeo"] },
+  { id: "acab_heli", name: "Acabado Helicóptero Industrial", category: "Otros", unit: "m2", coverage: 1.0, refPrice: 4200, tags: ["terminacion"] },
+  { id: "acab_escob", name: "Acabado Escobillado", category: "Otros", unit: "m2", coverage: 1.0, refPrice: 1800, tags: ["terminacion"] },
 ];
 
 export const SYSTEMS_CATALOG: ConstructionSystem[] = [
