@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { AdSenseSlot } from "@/components/AdSenseSlot";
 import { Button } from "@/components/ui/button";
+import { SupportWidget } from "@/components/SupportWidget";
 import { motion, AnimatePresence } from "framer-motion";
 import { jsPDF } from "jspdf";
 import { 
@@ -128,6 +129,7 @@ export default function Scanner() {
   const [projectNameInput, setProjectNameInput] = useState("");
   const [selectedRegion, setSelectedRegion] = useState("");
   const [selectedCommune, setSelectedCommune] = useState("");
+  const [hasTriggeredProactive, setHasTriggeredProactive] = useState(false);
 
   const [prices] = useState<Record<string, number>>({});
 
@@ -153,6 +155,22 @@ export default function Scanner() {
         parseFloat(tempDims.espesor) > 0
     );
   };
+
+  useEffect(() => {
+    if (step === 'confirm' && !hasTriggeredProactive) {
+        const timer = setTimeout(() => {
+            const event = new CustomEvent('obra-go-bot-trigger', {
+                detail: {
+                    message: `¡Hola! He notado que calculaste un ${selectedCategory} con ${dosage.resistencia} ${dosage.secado}. ¿Tienes alguna duda con la dosificación antes de descargar tu reporte profesional?`,
+                    forceOpen: true
+                }
+            });
+            window.dispatchEvent(event);
+            setHasTriggeredProactive(true);
+        }, 15000); // 15 segundos de espera
+        return () => clearTimeout(timer);
+    }
+  }, [step, hasTriggeredProactive, selectedCategory, dosage]);
 
   const triggerSensorFallback = (isForcedManually = false) => {
     setFallbackNotice(isForcedManually ? "Análisis forzado manual mediante sensores." : "Análisis obtenido mediante sensores volumétricos locales.");
@@ -648,6 +666,16 @@ export default function Scanner() {
           </div>
         )}
       </main>
+
+      <SupportWidget 
+        metadata={{
+            projectName: projectNameInput,
+            dims: editedDims,
+            dosage: dosage,
+            totalCost: currentCost.total,
+            step: step
+        }}
+      />
 
       {/* Paywall Modal (Solo en Descarga PDF) */}
       <AnimatePresence>
