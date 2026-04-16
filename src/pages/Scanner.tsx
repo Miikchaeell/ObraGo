@@ -148,6 +148,7 @@ export default function Scanner() {
 
   const categories = useMemo(() => Array.from(new Set(SYSTEMS_CATALOG.map(s => s.category))), []);
   const availableSystems = useMemo(() => SYSTEMS_CATALOG.filter(s => s.category === selectedCategory), [selectedCategory]);
+  const currentSystem = useMemo(() => SYSTEMS_CATALOG.find(s => s.id === selectedSystemId), [selectedSystemId]);
 
   useEffect(() => {
     if (!user) {
@@ -767,7 +768,8 @@ export default function Scanner() {
             dims: editedDims,
             dosage: dosage,
             totalCost: currentCost.total,
-            step: step
+            step: step,
+            category: currentSystem?.category
         }}
       />
 

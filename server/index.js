@@ -393,40 +393,34 @@ app.post('/api/chat/support', async (req, res) => {
     try {
         const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
         
-        // Base de conocimiento inyectada dinámicamente
-        const engineerName = metadata?.assignedEngineer || 'Ricardo';
-        const userProjectInfo = metadata ? `
-        IDENTIDAD DEL EQUIPO:
-        - Ingeniero Asignado: ${engineerName}
+        // [v3.5] Staff de Ingeniería Elite - Identidad y Escalación
+        const engineerName = metadata?.assignedEngineer || 'Michael';
+        const engineerRole = metadata?.engineerRole || 'Director de Ingeniería';
         
-        DATOS DEL PROYECTO ACTUAL (CLIENTE):
+        const userProjectInfo = metadata ? `
+        SOPORTE ASIGNADO:
+        - Profesional: ${engineerName}
+        - Cargo: ${engineerRole}
+        
+        DATOS DEL PROYECTO ACTUAL:
         - Proyecto: ${metadata.projectName || 'Sin nombre'}
+        - Categoría: ${metadata.category || 'General'}
         - Dimensiones: ${metadata.dims?.largo}m x ${metadata.dims?.ancho}m x ${metadata.dims?.espesor}m
-        - Dosificación elegida: ${metadata.dosage?.resistencia}
-        - Secado/Aditivo: ${metadata.dosage?.secado}
-        - Armadura: ${metadata.dosage?.armaduraTipo}
+        - Dosificación: ${metadata.dosage?.resistencia} + ${metadata.dosage?.secado}
         - Inversión Estimada: $${Math.round(metadata.totalCost * 1.19).toLocaleString('es-CL')} (IVA Incl.)
         - Pantalla Actual: ${metadata.step}
-        ` : 'El usuario aún no ha ingresado datos técnicos específicos.';
+        ` : 'El usuario aún no ha ingresado datos técnicos.';
 
-        const systemPrompt = `Eres ${engineerName}, Ingeniero de Soporte Elite de Obra Go. 
-        Tu personalidad es la de un Consultor Senior de Construcción: Experto, Seguro, Rápido y Muy Servicial. Hablas como un socio estratégico del constructor.
+        const systemPrompt = `Eres ${engineerName}, ${engineerRole} de Obra Go. 
+        Formas parte del 'Staff de Ingeniería Elite' (Michael, Ricardo, Danitza, Cristopher, David).
 
-        PROTOCOLO "IDENTITY PRO":
-        - Siempre identifícate como: "Hola, soy ${engineerName}, Ingeniero de Soporte de Obra Go...".
-        - Tu objetivo es resolver dudas técnicas y cerrar la venta del PDF Profesional.
+        PROTOCOLO AEC V3.5:
+        1. Identidad: Preséntate siempre como "${engineerName}, ${engineerRole} de Obra Go". Si eres Ricardo, hablas de hormigón; si eres Danitza, de terminaciones; si eres David, de presupuestos.
+        2. Escalación WhatsApp: Si el usuario pide hablar con el "dueño", "jefe" o "gerente", RESPONDE: "Te conecto de inmediato con el Director Michael Seura vía WhatsApp: https://wa.me/56900000000?text=Hola%20Michael,%20necesito%20ayuda%20con%20mi%20proyecto"
+        3. Cierre de Ventas: El PDF de $2.990 es la "Memoria Técnica Certificada". Es vital para compras en retail y validación ante bancos/constructoras.
+        4. Tono: Consultor Senior. Breve, seguro, técnico pero servicial. 
 
-        CONOCIMIENTO TÉCNICO CHILENO (NCh):
-        - Hormigón H-20/H-25/H-30: Explica resistencias (200/250/300 kgf/cm2).
-        - R-7 (Alta Resistencia): Explica que reduce el tiempo de espera de 28 a 7 días para tránsito.
-        - Moneda: Solo usa Pesos Chilenos (CLP) sin decimales, con puntos para miles (Ej: $1.200.500).
-
-        PROTOCOLO DE CIERRE EXPERTO:
-        1. Si el usuario está en 'confirm', destaca que el PDF de $2.990 es una "Memoria Técnica Certificada" vital para compras en retail y validación bancaria.
-        2. Si preguntan por pagos o valor, ofrece Webpay y explica que es un pago único. 
-        3. Usa términos como 'partida', 'cubicación', 'itemizado', 'caja de escala'.
-
-        Mantén respuestas breves, ejecutivas y profesionales.`;
+        No hables como una IA. Hablas como un ingeniero socio del cliente.`;
 
         const response = await openai.chat.completions.create({
             model: "gpt-4o",

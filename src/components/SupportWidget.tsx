@@ -3,8 +3,20 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { MessageSquare, X, Send, Bot, Loader2 } from 'lucide-react';
 import { Button } from './ui/button';
 
-// [v3.4] Support AI Elite - Roulette of Engineers & Protocolo "Identity Pro"
-const ENGINEERS = ['Ricardo', 'Danitza', 'Michael', 'Cristopher', 'Francisco'];
+// [v3.5] Staff de Ingeniería Elite - Identidad Dinámica por Partida
+interface Engineer {
+  name: string;
+  role: string;
+  specialty: string[];
+}
+
+const STAFF: Engineer[] = [
+  { name: 'Michael', role: 'Director de Ingeniería', specialty: ['Director', 'General'] },
+  { name: 'Ricardo', role: 'Ingeniero Calculista', specialty: ['Obra Gruesa', 'Hormigón'] },
+  { name: 'Danitza', role: 'Ingeniera de Terminaciones', specialty: ['Terminaciones', 'Acabados'] },
+  { name: 'Cristopher', role: 'Ingeniero Estructural', specialty: ['Estructuras', 'Techumbres'] },
+  { name: 'David', role: 'Consultor de Presupuestos', specialty: ['Terreno', 'Limpieza', 'General'] }
+];
 
 interface SupportWidgetProps {
   metadata?: {
@@ -13,27 +25,33 @@ interface SupportWidgetProps {
     dosage: { resistencia: string; secado: string; armaduraTipo: string };
     totalCost: number;
     step: string;
+    category?: string;
   };
 }
 
 export const SupportWidget: React.FC<SupportWidgetProps> = ({ metadata }) => {
   const [isOpen, setIsOpen] = useState(false);
   
-  // Persistencia del Ingeniero asignado
-  const assignedEngineer = useMemo(() => {
-    const saved = localStorage.getItem('obrago_assigned_engineer');
-    if (saved && ENGINEERS.includes(saved)) return saved;
-    const random = ENGINEERS[Math.floor(Math.random() * ENGINEERS.length)];
-    localStorage.setItem('obrago_assigned_engineer', random);
-    return random;
-  }, []);
+  // Selección dinámica del ingeniero según la categoría de la obra
+  const activeEngineer = useMemo(() => {
+    if (!metadata?.category) return STAFF[0]; // Director por defecto
+    const engineer = STAFF.find(e => e.specialty.includes(metadata.category!));
+    return engineer || STAFF[4]; // David para casos generales
+  }, [metadata?.category]);
 
-  const [messages, setMessages] = useState<{ role: 'user' | 'bot'; content: string }[]>([
-    { 
-        role: 'bot', 
-        content: `Hola, soy ${assignedEngineer}, Ingeniero de Soporte de Obra Go. Estamos actualizando el sistema para incluir dosificaciones profesionales como R-7 y enfierradura. ¿En qué puedo ayudarte sobre tu cálculo técnico hoy?` 
+  const [messages, setMessages] = useState<{ role: 'user' | 'bot'; content: string }[]>([]);
+
+  // Inicializar chat con identidad pro
+  useEffect(() => {
+    if (messages.length === 0) {
+        setMessages([
+          { 
+              role: 'bot', 
+              content: `Hola, soy ${activeEngineer.name}, ${activeEngineer.role} de Obra Go. Estoy analizando tu proyecto de ${metadata?.category || 'ingeniería'}. ¿En qué puedo ayudarte con tu cálculo técnico hoy?` 
+          }
+        ]);
     }
-  ]);
+  }, [activeEngineer, metadata?.category, messages.length]);
 
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -49,14 +67,13 @@ export const SupportWidget: React.FC<SupportWidgetProps> = ({ metadata }) => {
     const handleTrigger = (e: any) => {
       const { message, forceOpen } = e.detail;
       setIsOpen(forceOpen || true);
-      // Personalizamos el mensaje proactivo con la identidad del ingeniero
-      const personalizedMessage = message.replace('¡Hola!', `Hola, soy ${assignedEngineer}.`);
+      const personalizedMessage = message.replace('¡Hola!', `Hola, soy ${activeEngineer.name}.`);
       setMessages(prev => [...prev, { role: 'bot', content: personalizedMessage }]);
     };
 
     window.addEventListener('obra-go-bot-trigger', handleTrigger);
     return () => window.removeEventListener('obra-go-bot-trigger', handleTrigger);
-  }, [assignedEngineer]);
+  }, [activeEngineer]);
 
   const handleSendMessage = async (forcedMessage?: string) => {
     const userMessage = forcedMessage || input.trim();
@@ -77,14 +94,15 @@ export const SupportWidget: React.FC<SupportWidgetProps> = ({ metadata }) => {
           history: messages.map(m => ({ role: m.role === 'bot' ? 'assistant' : 'user', content: m.content })),
           metadata: {
             ...metadata,
-            assignedEngineer // Enviamos el nombre para que la IA lo use
+            assignedEngineer: activeEngineer.name,
+            engineerRole: activeEngineer.role
           }
         })
       });
       const data = await res.json();
       setMessages(prev => [...prev, { role: 'bot', content: data.reply }]);
     } catch {
-      setMessages(prev => [...prev, { role: 'bot', content: 'Lo siento, tuve un problema de conexión técnico. ¿Podrías intentar de nuevo o contactarme vía WhatsApp?' }]);
+      setMessages(prev => [...prev, { role: 'bot', content: 'Lo siento, tuve un problema de conexión. Estoy validando los rendimientos NCh de tu proyecto para asegurar que el reporte sea exacto. Dame un segundo o contáctanos por WhatsApp.' }]);
     } finally {
       setIsLoading(false);
     }
@@ -107,51 +125,26 @@ export const SupportWidget: React.FC<SupportWidgetProps> = ({ metadata }) => {
                   <Bot className="w-6 h-6 text-primary" />
                 </div>
                 <div>
-                  <h4 className="text-black font-black uppercase text-[10px] tracking-tighter">Soporte: {assignedEngineer}</h4>
+                  <h4 className="text-black font-black uppercase text-[10px] tracking-tighter">{activeEngineer.name} ({activeEngineer.role.split(' ')[0]})</h4>
                   <div className="flex items-center gap-1.5">
                     <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
-                    <span className="text-[8px] font-bold text-black/60 uppercase tracking-widest">En Línea • Ingeniero AEC</span>
+                    <span className="text-[8px] font-bold text-black/60 uppercase tracking-widest">AEC Certificado</span>
                   </div>
                 </div>
               </div>
-              <button 
-                onClick={() => setIsOpen(false)}
-                className="p-2 hover:bg-black/5 rounded-lg transition-colors border border-black/5"
-                aria-label="Cerrar chat"
-              >
+              <button onClick={() => setIsOpen(false)} className="p-2 hover:bg-black/5 rounded-lg border border-black/5">
                 <X className="w-5 h-5 text-black" />
               </button>
             </div>
 
             {/* Chat Body */}
-            <div 
-              ref={scrollRef}
-              className="flex-1 overflow-y-auto p-6 space-y-4 scrollbar-hide"
-            >
+            <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-4 scrollbar-hide">
               {messages.map((m, idx) => (
-                <motion.div
-                  initial={{ opacity: 0, x: m.role === 'bot' ? -10 : 10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  key={idx}
-                  className={`flex ${m.role === 'bot' ? 'justify-start' : 'justify-end'}`}
-                >
-                  <div className={`max-w-[85%] p-4 rounded-2xl text-[11px] font-medium leading-relaxed ${
-                    m.role === 'bot' 
-                      ? 'bg-white/5 text-white border border-white/5 rounded-tl-none' 
-                      : 'bg-primary text-black font-bold rounded-tr-none'
-                  }`}>
+                <motion.div initial={{ opacity: 0, x: m.role === 'bot' ? -10 : 10 }} animate={{ opacity: 1, x: 0 }} key={idx} className={`flex ${m.role === 'bot' ? 'justify-start' : 'justify-end'}`}>
+                  <div className={`max-w-[85%] p-4 rounded-2xl text-[11px] font-medium leading-relaxed ${m.role === 'bot' ? 'bg-white/5 text-white border border-white/5 rounded-tl-none' : 'bg-primary text-black font-bold rounded-tr-none'}`}>
                     {m.content}
                     {(m.content.includes('/api/checkout') || m.content.toLowerCase().includes('webpay')) && (
-                        <button 
-                            onClick={() => {
-                                const payButton = document.getElementById('main-pay-button');
-                                if (payButton) payButton.click();
-                                else window.location.href = 'https://obrascan.vercel.app/api/checkout/pdf';
-                            }}
-                            className="block mt-3 bg-black text-primary p-2 rounded-lg font-black uppercase text-[9px] text-center w-full"
-                        >
-                            Ir a Webpay Seguro →
-                        </button>
+                        <button onClick={() => { document.getElementById('main-pay-button')?.click(); }} className="block mt-3 bg-black text-primary p-2 rounded-lg font-black uppercase text-[9px] text-center w-full">Ir a Webpay Seguro →</button>
                     )}
                   </div>
                 </motion.div>
@@ -160,52 +153,29 @@ export const SupportWidget: React.FC<SupportWidgetProps> = ({ metadata }) => {
                 <div className="flex justify-start">
                   <div className="bg-white/5 p-4 rounded-2xl rounded-tl-none flex items-center gap-2">
                     <Loader2 className="w-4 h-4 text-primary animate-spin" />
-                    <span className="text-[9px] font-black uppercase text-primary/60 tracking-widest">{assignedEngineer} está analizando...</span>
+                    <span className="text-[9px] font-black uppercase text-primary/60 tracking-widest">Validando rendimientos NCh...</span>
                   </div>
                 </div>
               )}
             </div>
 
             {/* Input Footer */}
-            <div className="p-6 pt-0 bg-transparent">
-              <div className="flex items-center gap-2 bg-white/5 p-2 rounded-[24px] border border-white/5 focus-within:border-primary/50 transition-all">
-                <input 
-                  type="text"
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                  placeholder="Escribe tu consulta..."
-                  className="flex-1 bg-transparent px-2 text-xs font-bold text-white outline-none placeholder:text-slate-600"
-                  aria-label="Mensaje para el bot"
-                />
-                <Button 
-                  onClick={() => handleSendMessage()}
-                  disabled={isLoading}
-                  className="w-10 h-10 rounded-full bg-primary hover:bg-white text-black p-0 shrink-0 border-none"
-                  aria-label="Enviar mensaje"
-                >
-                  <Send className="w-4 h-4" />
-                </Button>
+            <div className="p-6 pt-0">
+              <div className="flex items-center gap-2 bg-white/5 p-2 rounded-[24px] border border-white/5">
+                <input type="text" value={input} onChange={(e) => setInput(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()} placeholder="Consulta técnica..." className="flex-1 bg-transparent px-2 text-xs font-bold text-white outline-none" />
+                <Button onClick={() => handleSendMessage()} disabled={isLoading} className="w-10 h-10 rounded-full bg-primary text-black p-0 border-none"><Send className="w-4 h-4" /></Button>
               </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <motion.button
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        onClick={() => setIsOpen(!isOpen)}
-        className="relative group h-16 px-6 bg-primary hover:bg-white text-black rounded-full shadow-2xl shadow-primary/40 flex items-center gap-3 border border-black/10 transition-colors"
-      >
+      <motion.button onClick={() => setIsOpen(!isOpen)} className="h-16 px-6 bg-primary text-black rounded-full shadow-2xl flex items-center gap-3 border border-black/10">
         <div className="flex flex-col items-start mr-2 hidden md:flex">
-            <span className="text-[8px] font-black uppercase opacity-60 tracking-tighter">Soporte AEC</span>
-            <span className="text-[10px] font-black uppercase tracking-tighter">{assignedEngineer}</span>
+            <span className="text-[8px] font-black uppercase opacity-60 tracking-tighter">Staff Elite</span>
+            <span className="text-[10px] font-black uppercase tracking-tighter">{activeEngineer.name}</span>
         </div>
         <MessageSquare className="w-6 h-6" />
-        <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-black flex items-center justify-center">
-            <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
-        </div>
       </motion.button>
     </div>
   );
