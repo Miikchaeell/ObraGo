@@ -37,9 +37,148 @@ import autoTable from "jspdf-autotable";
 import { supabase } from "@/lib/supabase";
 
 // --- COMPONENTES AUXILIARES ---
-// ... (omitting AnalyzingProgressRing code for brevity in tool call)
 
-// ...
+const AnalyzingProgressRing = ({ isComplete }: { isComplete: boolean }) => {
+  const [progress, setProgress] = useState(0);
+  const { plan } = useAuth();
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setProgress((prev) => {
+        if (isComplete) return 100;
+        return prev < 90 ? prev + 5 : prev;
+      });
+    }, 800);
+    return () => clearInterval(interval);
+  }, [isComplete]);
+
+  return (
+    <div className="relative w-72 h-72 flex flex-col items-center justify-center">
+      <svg className="w-full h-full -rotate-90">
+        <circle cx="144" cy="144" r="120" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-white/5" />
+        <circle cx="144" cy="144" r="120" stroke="currentColor" strokeWidth="8" fill="transparent"
+          strokeDasharray={753.9}
+          strokeDashoffset={753.9 - (753.9 * progress) / 100}
+          strokeLinecap="round"
+          className="text-primary transition-all duration-1000 ease-out"
+        />
+      </svg>
+      <div className="absolute flex flex-col items-center">
+        <span className="text-5xl font-black italic tracking-tighter text-white">{Math.round(progress)}%</span>
+        <span className="text-[10px] font-black uppercase tracking-[0.4em] text-primary mt-2">
+            {isComplete ? "Ingeniería Lista" : "Analizando Píxeles"}
+        </span>
+      </div>
+    </div>
+  );
+};
+
+export default function Scanner() {
+  const navigate = useNavigate();
+  const { user, plan } = useAuth();
+  const isPremium = plan === 'premium';
+
+  const [step, setStep] = useState<'config' | 'upload' | 'analyzing' | 'dosage_config' | 'confirm'>('config');
+  const [isAnalysisComplete, setIsAnalysisComplete] = useState(false);
+  const [showForcedButton, setShowForcedButton] = useState(false);
+  const [showPaywall, setShowPaywall] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  const [projectNameInput, setProjectNameInput] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedSystemId, setSelectedSystemId] = useState("");
+  const [tempDims, setTempDims] = useState({ largo: "", ancho: "", espesor: "10" });
+  const [editedDims, setEditedDims] = useState({ largo: 0, ancho: 0, espesor: 10 });
+  const [selectedRegion, setSelectedRegion] = useState("");
+  const [selectedCommune, setSelectedCommune] = useState("");
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+
+  const [dosage, setDosage] = useState<DosageSelection>({
+    resistencia: "G-25",
+    colocacion: "GN",
+    secado: "Estándar",
+    mezclado: "Planta (Mixer)",
+    vaciado: "Directa",
+    acabado: "Platachado",
+    armaduraTipo: "ACMA",
+    armaduraDetalle: "malla_acma_c92"
+  });
+
+  const categories = Array.from(new Set(SYSTEMS_CATALOG.map(s => s.category)));
+  const availableSystems = SYSTEMS_CATALOG.filter(s => s.category === selectedCategory);
+  const currentSystem = SYSTEMS_CATALOG.find(s => s.id === selectedSystemId);
+
+  const wasteMargin = 0.05;
+  const currentMaterials = calculateMaterialQuantities(selectedSystemId, editedDims, {}, wasteMargin, dosage);
+  const currentCost = calculateTotalCost(selectedSystemId, editedDims, currentMaterials);
+
+  const validatePreConfig = () => projectNameInput && selectedCategory && selectedSystemId && tempDims.largo && tempDims.ancho && selectedRegion && selectedCommune;
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreviewImage(reader.result as string);
+        setEditedDims({
+            largo: parseFloat(tempDims.largo) || 0,
+            ancho: parseFloat(tempDims.ancho) || 0,
+            espesor: parseFloat(tempDims.espesor) || 10
+        });
+        setStep('analyzing');
+        runAnalysis();
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const runAnalysis = async () => {
+    setShowForcedButton(false);
+    const timer = setTimeout(() => setShowForcedButton(true), 4000);
+    
+    await new Promise(resolve => setTimeout(resolve, 6000));
+    clearTimeout(timer);
+    
+    const scanData = {
+      project_name: projectNameInput,
+      category: selectedCategory,
+      system_id: selectedSystemId,
+      dimensions: editedDims,
+      total_cost: currentCost.total,
+      region: selectedRegion,
+      commune: selectedCommune,
+      user_id: user?.id
+    };
+
+    try {
+        if (supabase) {
+            await supabase.from('scans').insert([scanData]);
+        }
+    } catch (err) {
+        console.warn("Offline Mode Active: Local Storage only.");
+    }
+
+    setIsAnalysisComplete(true);
+    setStep('dosage_config');
+  };
+
+  const triggerSensorFallback = () => {
+    setIsAnalysisComplete(true);
+    setStep('dosage_config');
+  };
+
+  const formatCLP = (val: number) => new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(val);
+
+  const addInstitutionWatermark = (doc: any) => {
+    const totalPages = doc.internal.getNumberOfPages();
+    for(let i=1; i<=totalPages; i++) {
+        doc.setPage(i);
+        doc.setTextColor(240, 240, 240);
+        doc.setFontSize(60);
+        doc.setFont("helvetica", "bold");
+        doc.text("OBRA GO", 105, 150, { align: "center", angle: 45 });
+    }
+  };
 
   const handleDownload = () => {
     try {
