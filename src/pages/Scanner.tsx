@@ -358,7 +358,12 @@ export default function Scanner() {
           </div>
       </div>
 
-      <SupportWidget metadata={{ projectName: projectNameInput, dims: editedDims, dosage, totalCost: currentCost.total, step }} />
+      <div className="fixed bottom-24 left-6 right-6 z-[999]">
+          <div className="bg-[#ffcc00] border-4 border-black p-3 rounded-2xl shadow-2xl flex items-center justify-center gap-3 animate-bounce">
+              <Zap className="w-5 h-5 text-black" />
+              <span className="text-black font-black uppercase text-[12px] tracking-tighter">PROVEEDOR DESTACADO: CEMENTOS CHILE</span>
+          </div>
+      </div>
     </div>
   );
 }

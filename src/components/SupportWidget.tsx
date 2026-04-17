@@ -5,9 +5,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Send, Loader2, Zap } from 'lucide-react';
 import { Button } from './ui/button';
-import { useAuth } from '@/context/AuthContext';
 
-// [V5.1] Staff de Rostro Humano - Obra Go
+// [V5.1] Staff 100% Humano - Obra Go (CERO ROBOTS)
 interface AgentConfig {
   name: string;
   role: string;
@@ -24,20 +23,19 @@ const AGENT_DATA: Record<string, AgentConfig> = {
 
 export const SupportWidget: React.FC<any> = ({ metadata }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const { plan } = useAuth();
   const hasGreeted = useRef(false);
   
-  // [FORZADO] MODO PRUEBA TOTAL: Danitza siempre activa
+  // Danitza es la única agente autorizada
   const agent = AGENT_DATA['Danitza'];
-  const [messages, setMessages] = useState<{ role: 'user' | 'bot'; content: string }[]>([]);
+  const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([]);
 
   useEffect(() => {
     if (!hasGreeted.current && messages.length === 0) {
         hasGreeted.current = true;
         setMessages([
           { 
-              role: 'bot', 
-              content: `¡Hola Michael! Soy Danitza. He revisado tu cubicación de $110M. ¿Quieres que veamos el desglose del APU o prefieres descargar el informe ahora?` 
+              role: 'assistant', 
+              content: `¡Hola! Soy Danitza de Obra Go. Ya analicé tu proyecto técnicamente. ¿Tienes alguna duda con tu presupuesto de $110M o quieres descargar el PDF Élite?` 
           }
         ]);
     }
@@ -66,9 +64,9 @@ export const SupportWidget: React.FC<any> = ({ metadata }) => {
         body: JSON.stringify({ message: userMsg, history: messages, metadata: { ...metadata, assignedAgent: agent.name } })
       });
       const data = await res.json();
-      setMessages(prev => [...prev, { role: 'bot', content: data.reply }]);
+      setMessages(prev => [...prev, { role: 'assistant', content: data.reply }]);
     } catch {
-      setMessages(prev => [...prev, { role: 'bot', content: "Excelente consulta. Como experta en Obra Go, te recomiendo descargar el PDF Élite para ver los detalles técnicos de tu proyecto." }]);
+      setMessages(prev => [...prev, { role: 'assistant', content: "Excelente consulta. Como experta en Obra Go, te recomiendo descargar el PDF Élite para ver los detalles técnicos de tu proyecto." }]);
     } finally {
       setIsLoading(false);
     }
@@ -90,7 +88,15 @@ export const SupportWidget: React.FC<any> = ({ metadata }) => {
             <div className="bg-primary p-6 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 bg-black rounded-xl overflow-hidden border border-white/10 shadow-lg">
-                  <img src={agent.avatar} alt={agent.name} className="w-full h-full object-cover" />
+                  <img 
+                    src={agent.avatar} 
+                    alt={agent.name} 
+                    className="w-full h-full object-cover" 
+                    onError={(e) => {
+                        // Fallback profesional si la imagen no carga, NUNCA UN ROBOT
+                        e.currentTarget.src = 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=200&h=200';
+                    }}
+                  />
                 </div>
                 <div>
                   <h4 className="text-black font-black uppercase text-[12px]">{agent.name}</h4>
@@ -103,8 +109,8 @@ export const SupportWidget: React.FC<any> = ({ metadata }) => {
             {/* Body */}
             <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-4">
               {messages.map((m, idx) => (
-                <div key={idx} className={`flex ${m.role === 'bot' ? 'justify-start' : 'justify-end'}`}>
-                  <div className={`p-4 rounded-2xl text-xs ${m.role === 'bot' ? 'bg-white/5 text-white border border-white/5' : 'bg-primary text-black font-bold'}`}>
+                <div key={idx} className={`flex ${m.role === 'assistant' ? 'justify-start' : 'justify-end'}`}>
+                  <div className={`p-4 rounded-2xl text-xs ${m.role === 'assistant' ? 'bg-white/5 text-white border border-white/5' : 'bg-primary text-black font-bold'}`}>
                     {m.content}
                   </div>
                 </div>
@@ -129,7 +135,14 @@ export const SupportWidget: React.FC<any> = ({ metadata }) => {
             <span className="text-[12px] font-black uppercase">{agent.name}</span>
         </div>
         <div className="w-10 h-10 bg-black rounded-full overflow-hidden border border-black/10">
-            <img src={agent.avatar} alt={agent.name} className="w-full h-full object-cover" />
+            <img 
+                src={agent.avatar} 
+                alt={agent.name} 
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                    e.currentTarget.src = 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=200&h=200';
+                }}
+            />
         </div>
       </motion.button>
     </div>
