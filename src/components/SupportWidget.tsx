@@ -1,6 +1,7 @@
-// @ts-nocheck
 /* eslint-disable */
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+// @ts-nocheck
+/* eslint-disable @typescript-eslint/ban-ts-comment */
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Send, Loader2, Zap } from 'lucide-react';
 import { Button } from './ui/button';
@@ -14,45 +15,25 @@ interface AgentConfig {
 }
 
 const AGENT_DATA: Record<string, AgentConfig> = {
-  Michael: { 
-    name: 'Michael', 
-    role: 'Experto en Estructuras', 
-    avatar: '/avatars/michael.jpg' 
-  },
-  Ricardo: { 
-    name: 'Ricardo', 
-    role: 'Experto en Hormigones', 
-    avatar: '/avatars/ricardo.jpg' 
-  },
   Danitza: { 
     name: 'Danitza', 
     role: 'Especialista en Presupuestos', 
     avatar: '/avatars/danitza.jpg' 
-  },
-  Cristopher: { 
-    name: 'Cristopher', 
-    role: 'Supervisor de Campo', 
-    avatar: '/avatars/cristopher.jpg' 
-  },
-  David: { 
-    name: 'David', 
-    role: 'Logística y APU', 
-    avatar: '/avatars/david.jpg' 
   }
 };
-
-const AGENT_NAMES = Object.keys(AGENT_DATA);
 
 export const SupportWidget: React.FC<any> = ({ metadata }) => {
   const [isOpen, setIsOpen] = useState(false);
   const { plan } = useAuth();
+  const hasGreeted = useRef(false);
   
   // [FORZADO] MODO PRUEBA TOTAL: Danitza siempre activa
   const agent = AGENT_DATA['Danitza'];
   const [messages, setMessages] = useState<{ role: 'user' | 'bot'; content: string }[]>([]);
 
   useEffect(() => {
-    if (messages.length === 0) {
+    if (!hasGreeted.current && messages.length === 0) {
+        hasGreeted.current = true;
         setMessages([
           { 
               role: 'bot', 

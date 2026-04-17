@@ -1,5 +1,6 @@
-// @ts-nocheck
 /* eslint-disable */
+// @ts-nocheck
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -108,8 +109,8 @@ export default function Scanner() {
   const currentSystem = SYSTEMS_CATALOG.find(s => s.id === selectedSystemId);
 
   const wasteMargin = 0.05;
-  const currentMaterials = calculateMaterialQuantities(currentSystem!, editedDims, dosage, wasteMargin);
-  const currentCost = calculateTotalCost(currentMaterials, editedDims, dosage);
+  const currentMaterials = calculateMaterialQuantities(selectedSystemId, editedDims, {}, wasteMargin, dosage);
+  const currentCost = calculateTotalCost(selectedSystemId, editedDims, currentMaterials);
 
   const validatePreConfig = () => projectNameInput && selectedCategory && selectedSystemId && tempDims.largo && tempDims.ancho && selectedRegion && selectedCommune;
 
@@ -181,8 +182,9 @@ export default function Scanner() {
 
   const exportPDF = () => {
     const doc = new jsPDF();
+    
+    // PAGE 1: RESUMEN EJECUTIVO
     addInstitutionWatermark(doc);
-
     doc.setTextColor(225, 255, 0);
     doc.setFillColor(15, 17, 21);
     doc.rect(0, 0, 210, 40, 'F');
@@ -190,59 +192,70 @@ export default function Scanner() {
     doc.setFontSize(24);
     doc.text("REPORTE TÉCNICO ÉLITE", 15, 25);
     doc.setFontSize(10);
-    doc.text("OBRA GO • INGENIERÍA Y CUBICACIÓN", 15, 33);
+    doc.text("OBRA GO • INGENIERÍA Y CUBICACIÓN V5.1", 15, 33);
 
     let y = 55;
     doc.setTextColor(15, 17, 21);
     doc.setFontSize(12);
-    doc.text("PROYECTO:", 15, y); 
+    doc.text("DATOS DEL PROYECTO", 15, y); y += 10;
+    doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
-    doc.text(projectNameInput.toUpperCase(), 45, y); y += 10;
-    
-    doc.setFont("helvetica", "bold");
-    doc.text("RESUMEN GENERAL", 15, y); y += 10;
-    
-    doc.setFont("helvetica", "normal");
-    doc.text(`FECHA: ${new Date().toLocaleDateString('es-CL')}`, 15, y); y += 8;
-    doc.text(`UBICACIÓN: ${selectedCommune}, ${selectedRegion}`, 15, y); y += 20;
+    doc.text(`PROYECTO: ${projectNameInput.toUpperCase()}`, 15, y); y += 6;
+    doc.text(`UBICACIÓN: ${selectedCommune}, ${selectedRegion}`, 15, y); y += 6;
+    doc.text(`FECHA: ${new Date().toLocaleDateString('es-CL')}`, 15, y); y += 15;
+
+    // Tabla de Resumen Económico
+    const costoDirecto = currentCost.costoDirecto;
+    const gg = currentCost.gg; // 12%
+    const profit = currentCost.profit; // 15%
+    const subtotalNeto = currentCost.total;
+    const iva = Math.round(subtotalNeto * 0.19);
+    const totalFinal = subtotalNeto + iva;
 
     doc.autoTable({
         startY: y,
-        head: [['ÍTEM', 'DESCRIPCIÓN', 'UNID.', 'CANT.', 'VALOR NETO']],
-        body: [[
-            '01', 
-            `${currentSystem?.name} (Grado ${dosage.resistencia})`,
-            'm3',
-            currentCost.volume.toFixed(2),
-            formatCLP(currentCost.total)
-        ]],
+        head: [['DESCRIPCIÓN', 'VALOR (%)', 'MONTO (CLP)']],
+        body: [
+            ['COSTO DIRECTO (MATERIALES + M.O)', '-', formatCLP(costoDirecto)],
+            ['GASTOS GENERALES', '12%', formatCLP(gg)],
+            ['UTILIDAD', '15%', formatCLP(profit)],
+            ['SUBTOTAL NETO', '-', formatCLP(subtotalNeto)],
+            ['I.V.A', '19%', formatCLP(iva)],
+            ['TOTAL GENERAL', '-', formatCLP(totalFinal)]
+        ],
         theme: 'grid',
-        headStyles: { fillColor: [20, 20, 20], textColor: [225, 255, 0] }
+        headStyles: { fillColor: [20, 20, 20], textColor: [225, 255, 0] },
+        styles: { fontStyle: 'bold' }
     });
 
-    y = (doc as any).lastAutoTable.finalY + 20;
-    doc.setFontSize(14);
-    doc.setFont("helvetica", "bold");
-    doc.text(`TOTAL GENERAL (IVA INCL.): ${formatCLP(currentCost.total * 1.19)}`, 15, y);
-
+    // PAGE 2: DESGLOSE DE APU (MINCHO CHICO)
     doc.addPage();
     addInstitutionWatermark(doc);
-    doc.text("DESGLOSE DE APU (MINCHO CHICO)", 15, 20);
+    doc.setTextColor(15, 17, 21);
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("DESGLOSE DE ANÁLISIS DE PRECIOS UNITARIOS (APU)", 15, 20);
+    doc.setFontSize(10);
+    doc.text(`PARTIDA: ${currentSystem?.name} (Grado ${dosage.resistencia})`, 15, 28);
     
     const apuRows = [];
     currentMaterials.forEach(m => {
         apuRows.push([m.name, m.unit, m.quantity.toFixed(2), formatCLP(m.price), formatCLP(m.total)]);
     });
 
+    // Añadir Mano de Obra como fila
+    apuRows.push(['Mano de Obra Especializada', 'serv', '1.00', formatCLP(currentCost.labor), formatCLP(currentCost.labor)]);
+
     doc.autoTable({
-        startY: 30,
-        head: [['RECURSO', 'UNID.', 'CANT.', 'P. UNIT', 'TOTAL']],
+        startY: 35,
+        head: [['RECURSO / INSUMO', 'UNID.', 'CANT.', 'P. UNIT', 'TOTAL']],
         body: apuRows,
         theme: 'striped',
-        styles: { fontSize: 8 }
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [15, 17, 21], textColor: [255, 255, 255] }
     });
 
-    doc.save(`ObraGo_${projectNameInput.replace(/\s+/g, '_')}.pdf`);
+    doc.save(`ObraGo_${projectNameInput.replace(/\s+/g, '_')}_V5.1.pdf`);
   };
 
   return (
