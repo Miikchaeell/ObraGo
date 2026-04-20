@@ -13,7 +13,7 @@ export const SupportWidget = () => {
   const [history, setHistory] = useState([
     {
       role: 'assistant',
-      content: "¡Hola! Soy Michael de Obra Go. Ya realicé la validación técnica de tu presupuesto. ¿Tienes dudas con las partidas o prefieres bajar el Reporte Élite con el APU detallado ahora mismo?"
+      content: "¡Hola! Soy Michael de Obra Go. Ya validé tu presupuesto de $111M. ¿Te ayudo con el APU o quieres bajar el Reporte Élite por $2.990?"
     }
   ]);
   const [isTyping, setIsTyping] = useState(false);

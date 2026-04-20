@@ -141,7 +141,6 @@ export default function Scanner() {
           </div>
         )}
 
-        {step === 'result' && (
           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-5 duration-500">
             <div className="bg-white/5 border border-white/10 p-8 rounded-[48px] text-center space-y-4 shadow-2xl">
               <div className="inline-block px-4 py-1 bg-orange-500/20 text-orange-500 text-[10px] font-black uppercase rounded-full tracking-widest mb-2">
@@ -152,32 +151,21 @@ export default function Scanner() {
               </h3>
               <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">Inversión Estimada con IVA</p>
               
-              <div className="grid grid-cols-2 gap-3 mt-8">
+              <div className="grid grid-cols-1 gap-3 mt-8">
                 <Button 
                   onClick={() => generateElitePDF(name)}
-                  className="h-14 bg-orange-500 text-black font-black rounded-2xl flex items-center justify-center gap-2"
+                  className="h-20 bg-orange-500 text-black font-black rounded-2xl flex items-center justify-center gap-2 text-xl shadow-2xl"
                 >
-                  <Download className="w-5 h-5" /> REPORTE PDF
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="h-14 border-white/10 hover:bg-white/5 rounded-2xl flex items-center justify-center"
-                >
-                  <Share2 className="w-5 h-5" />
+                  DESCARGAR REPORTE TÉCNICO (PDF)
                 </Button>
               </div>
             </div>
 
-            <div className="bg-orange-500/10 border border-orange-500/20 p-6 rounded-[32px] flex items-center gap-4">
-              <div className="w-12 h-12 bg-orange-500 rounded-2xl flex items-center justify-center shrink-0">
-                <ShieldCheck className="w-6 h-6 text-black" />
-              </div>
-              <div className="text-left">
-                <p className="text-[10px] font-black text-orange-500 uppercase tracking-widest">Validación Técnica</p>
-                <p className="text-xs text-orange-100/70 leading-relaxed font-bold">
-                  Hormigón G25 y Fierro cubicados al 100% bajo NCh 170.
+            <div className="bg-orange-500/10 border border-orange-500/20 p-8 rounded-[32px] text-center">
+                <p className="text-[10px] font-black text-orange-500 uppercase tracking-[0.2em] mb-2">Escaneo 100% Exitoso</p>
+                <p className="text-sm text-orange-100 font-bold leading-relaxed">
+                  Hormigón G25 y Fierro cubicados según norma NCh 170.
                 </p>
-              </div>
             </div>
           </div>
         )}
