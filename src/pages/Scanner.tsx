@@ -11,7 +11,6 @@ import {
   Download, 
   Settings2, 
   Boxes,
-  Lock,
   AlertCircle,
   FileText,
   ShieldCheck,
@@ -40,7 +39,6 @@ import { supabase } from "@/lib/supabase";
 
 const AnalyzingProgressRing = ({ isComplete }: { isComplete: boolean }) => {
   const [progress, setProgress] = useState(0);
-  const { plan } = useAuth();
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -75,13 +73,10 @@ const AnalyzingProgressRing = ({ isComplete }: { isComplete: boolean }) => {
 
 export default function Scanner() {
   const navigate = useNavigate();
-  const { user, plan } = useAuth();
-  const isPremium = plan === 'premium';
+  const { user } = useAuth();
 
   const [step, setStep] = useState<'config' | 'upload' | 'analyzing' | 'dosage_config' | 'confirm'>('config');
   const [isAnalysisComplete, setIsAnalysisComplete] = useState(false);
-  const [showForcedButton, setShowForcedButton] = useState(false);
-  const [showPaywall, setShowPaywall] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [projectNameInput, setProjectNameInput] = useState("");
@@ -91,7 +86,6 @@ export default function Scanner() {
   const [editedDims, setEditedDims] = useState({ largo: 0, ancho: 0, espesor: 10 });
   const [selectedRegion, setSelectedRegion] = useState("");
   const [selectedCommune, setSelectedCommune] = useState("");
-  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   const [dosage, setDosage] = useState<DosageSelection>({
     resistencia: "G-25",
@@ -112,14 +106,13 @@ export default function Scanner() {
   const currentMaterials = calculateMaterialQuantities(selectedSystemId, editedDims, {}, wasteMargin, dosage);
   const currentCost = calculateTotalCost(selectedSystemId, editedDims, currentMaterials);
 
-  const validatePreConfig = () => projectNameInput && selectedCategory && selectedSystemId && tempDims.largo && tempDims.ancho && selectedRegion && selectedCommune;
+  const validatePreConfig = () => projectNameInput && selectedCategory && selectedSystemId && tempDims.largo && tempDims.ancho;
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setPreviewImage(reader.result as string);
         setEditedDims({
             largo: parseFloat(tempDims.largo) || 0,
             ancho: parseFloat(tempDims.ancho) || 0,
@@ -133,20 +126,13 @@ export default function Scanner() {
   };
 
   const runAnalysis = async () => {
-    setShowForcedButton(false);
-    const timer = setTimeout(() => setShowForcedButton(true), 4000);
-    
-    await new Promise(resolve => setTimeout(resolve, 6000));
-    clearTimeout(timer);
-    
+    await new Promise(resolve => setTimeout(resolve, 4000));
     const scanData = {
       project_name: projectNameInput,
       category: selectedCategory,
       system_id: selectedSystemId,
       dimensions: editedDims,
       total_cost: currentCost.total,
-      region: selectedRegion,
-      commune: selectedCommune,
       user_id: user?.id
     };
 
@@ -155,14 +141,9 @@ export default function Scanner() {
             await supabase.from('scans').insert([scanData]);
         }
     } catch (err) {
-        console.warn("Offline Mode Active: Local Storage only.");
+        console.warn("Offline Mode Active.");
     }
 
-    setIsAnalysisComplete(true);
-    setStep('dosage_config');
-  };
-
-  const triggerSensorFallback = () => {
     setIsAnalysisComplete(true);
     setStep('dosage_config');
   };
@@ -181,10 +162,9 @@ export default function Scanner() {
   };
 
   const handleDownload = () => {
+    // [FUERZA BRUTA: CERO BLOQUEOS]
     try {
       const doc = new jsPDF();
-      
-      // PAGE 1: RESUMEN EJECUTIVO
       addInstitutionWatermark(doc);
       doc.setTextColor(225, 255, 0);
       doc.setFillColor(15, 17, 21);
@@ -193,22 +173,15 @@ export default function Scanner() {
       doc.setFontSize(24);
       doc.text("REPORTE TÉCNICO ÉLITE", 15, 25);
       doc.setFontSize(10);
-      doc.text("OBRA GO • INGENIERÍA Y CUBICACIÓN V5.1", 15, 33);
+      doc.text("OBRA GO • INGENIERÍA Y CUBICACIÓN V5.2", 15, 33);
 
       let y = 55;
       doc.setTextColor(15, 17, 21);
-      doc.setFontSize(12);
-      doc.text("DATOS DEL PROYECTO", 15, y); y += 10;
       doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
-      doc.text(`PROYECTO: ${projectNameInput.toUpperCase()}`, 15, y); y += 6;
-      doc.text(`UBICACIÓN: ${selectedCommune}, ${selectedRegion}`, 15, y); y += 6;
-      doc.text(`FECHA: ${new Date().toLocaleDateString('es-CL')}`, 15, y); y += 15;
+      doc.text(`PROYECTO: ${projectNameInput.toUpperCase() || "SIN NOMBRE"}`, 15, y); y += 10;
 
-      // Tabla de Resumen Económico
       const costoDirecto = currentCost.costoDirecto;
-      const gg = currentCost.gg; // 12%
-      const profit = currentCost.profit; // 15%
       const subtotalNeto = currentCost.total;
       const iva = Math.round(subtotalNeto * 0.19);
       const totalFinal = subtotalNeto + iva;
@@ -217,52 +190,21 @@ export default function Scanner() {
           startY: y,
           head: [['DESCRIPCIÓN', 'VALOR (%)', 'MONTO (CLP)']],
           body: [
-              ['COSTO DIRECTO (MATERIALES + M.O)', '-', formatCLP(costoDirecto)],
-              ['GASTOS GENERALES', '12%', formatCLP(gg)],
-              ['UTILIDAD', '15%', formatCLP(profit)],
+              ['COSTO DIRECTO', '-', formatCLP(costoDirecto)],
+              ['GASTOS GENERALES', '12%', formatCLP(currentCost.gg)],
+              ['UTILIDAD', '15%', formatCLP(currentCost.profit)],
               ['SUBTOTAL NETO', '-', formatCLP(subtotalNeto)],
               ['I.V.A', '19%', formatCLP(iva)],
               ['TOTAL GENERAL', '-', formatCLP(totalFinal)]
           ],
           theme: 'grid',
-          headStyles: { fillColor: [20, 20, 20], textColor: [225, 255, 0] },
-          styles: { fontStyle: 'bold' }
+          headStyles: { fillColor: [20, 20, 20], textColor: [225, 255, 0] }
       });
 
-      // PAGE 2: DESGLOSE DE APU (MINCHO CHICO)
-      doc.addPage();
-      addInstitutionWatermark(doc);
-      doc.setTextColor(15, 17, 21);
-      doc.setFontSize(14);
-      doc.setFont("helvetica", "bold");
-      doc.text("DESGLOSE DE ANÁLISIS DE PRECIOS UNITARIOS (APU)", 15, 20);
-      doc.setFontSize(10);
-      doc.text(`PARTIDA: ${currentSystem?.name} (Grado ${dosage.resistencia})`, 15, 28);
-      
-      const apuRows = [];
-      currentMaterials.forEach(m => {
-          apuRows.push([m.name, m.unit, m.quantity.toFixed(2), formatCLP(m.price), formatCLP(m.total)]);
-      });
-
-      // Añadir Mano de Obra como fila
-      apuRows.push(['Mano de Obra Especializada', 'serv', '1.00', formatCLP(currentCost.labor), formatCLP(currentCost.labor)]);
-
-      autoTable(doc, {
-          startY: 35,
-          head: [['RECURSO / INSUMO', 'UNID.', 'CANT.', 'P. UNIT', 'TOTAL']],
-          body: apuRows,
-          theme: 'striped',
-          styles: { fontSize: 8 },
-          headStyles: { fillColor: [15, 17, 21], textColor: [255, 255, 255] }
-      });
-
-      doc.save(`ObraGo_${projectNameInput.replace(/\s+/g, '_')}_V5.1.pdf`);
+      doc.save(`ObraGo_Proyecto_${projectNameInput.replace(/\s+/g, '_') || "Final"}.pdf`);
     } catch (err) {
-      console.error("PDF Error:", err);
-      // Fallback simple if autotable fails
-      const doc = new jsPDF();
-      doc.text("PRUEBA OBRA GO - FALLA CRÍTICA DE TABLA", 10, 10);
-      doc.save("ObraGo_Fallback.pdf");
+      console.error("PDF Fail:", err);
+      alert("Error al generar PDF. Reintenta ahora.");
     }
   };
 
@@ -270,7 +212,7 @@ export default function Scanner() {
     <div className="min-h-screen bg-background text-white flex flex-col max-w-lg mx-auto shadow-2xl">
       <nav className="p-4 flex items-center justify-between border-b border-white/10 bg-black/50 backdrop-blur-md sticky top-0 z-50">
         <button onClick={() => navigate(-1)} className="p-2"><ChevronLeft className="w-6 h-6" /></button>
-        <h1 className="text-sm font-black uppercase text-primary italic">Obra Go Élite 5.1</h1>
+        <h1 className="text-sm font-black uppercase text-primary italic">Obra Go Élite 5.2</h1>
         <button onClick={() => setStep('config')} className="p-2"><RotateCcw className="w-5 h-5" /></button>
       </nav>
 
@@ -334,7 +276,10 @@ export default function Scanner() {
                         <p className="text-4xl font-black italic">{formatCLP(currentCost.total * 1.19)}</p>
                         <p className="text-[10px] uppercase font-black opacity-50">Total con IVA</p>
                     </div>
-                    <Button onClick={handleDownload} className="w-full h-16 bg-black text-primary font-black uppercase rounded-2xl flex gap-3 shadow-xl"><Download /> Descargar PDF Élite</Button>
+                    {/* [BOTÓN SIN CANDADOS] */}
+                    <Button onClick={handleDownload} className="w-full h-16 bg-black text-primary font-black uppercase rounded-2xl flex gap-3 shadow-xl">
+                      <Download /> Descargar PDF Élite
+                    </Button>
                 </div>
 
                 <div style={{ height: '120px', background: '#ffcc00', border: '10px solid black', display: 'flex' }} className="w-full rounded-[32px] items-center justify-center p-6 shadow-2xl">
@@ -349,14 +294,6 @@ export default function Scanner() {
             </div>
         )}
       </main>
-
-      {/* [BANNER PUBLICITARIO FORZADO V5.1] */}
-      <div className="fixed bottom-24 left-6 right-6 z-[999]">
-          <div className="bg-[#ffcc00] border-4 border-black p-3 rounded-2xl shadow-2xl flex items-center justify-center gap-3 animate-bounce">
-              <Zap className="w-5 h-5 text-black" />
-              <span className="text-black font-black uppercase text-[12px] tracking-tighter">PROVEEDOR DESTACADO: CEMENTOS CHILE</span>
-          </div>
-      </div>
 
       <div className="fixed bottom-24 left-6 right-6 z-[999]">
           <div className="bg-[#ffcc00] border-4 border-black p-3 rounded-2xl shadow-2xl flex items-center justify-center gap-3 animate-bounce">
