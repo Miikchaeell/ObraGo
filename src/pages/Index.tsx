@@ -14,6 +14,7 @@ import {
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
+import { AdSenseSlot } from "@/components/AdSenseSlot";
 
 const cardAlbanileria = "https://images.unsplash.com/photo-1589939705384-5185137a7f0f?q=80&w=800&auto=format&fit=crop";
 const cardHormigon = "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=800&auto=format&fit=crop";
@@ -186,6 +187,11 @@ export default function Index() {
                   </div>
                 </div>
               ))}
+            </div>
+
+            {/* [v7.0] Monetization Slot */}
+            <div className="pt-6">
+                <AdSenseSlot id="home-footer-ads" className="w-full" />
             </div>
           </section>
 

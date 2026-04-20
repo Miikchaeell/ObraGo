@@ -1,11 +1,11 @@
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { 
-  MessageSquare, 
   ShieldCheck, 
   ArrowRight,
   Zap,
-  Globe
+  Globe,
+  Share2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 

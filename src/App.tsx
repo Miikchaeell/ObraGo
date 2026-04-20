@@ -12,29 +12,17 @@ import Admin from "@/pages/Admin";
 import Dashboard from "@/pages/Dashboard";
 import ProjectView from "@/pages/ProjectView";
 import Landing from "@/pages/Landing";
-import { SupportWidget } from "@/components/SupportWidget";
 import { useAuth } from "@/context/AuthContext";
 
 const ProtectedRoute = ({ children, allowGuest = false }: { children: React.ReactNode, allowGuest?: boolean }) => {
   const { user } = useAuth();
 
-  // if (isLoading) {
-  //   return (
-  //     <div className="min-h-screen bg-background flex flex-col items-center justify-center space-y-4">
-  //       <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-  //       <p className="text-primary text-xs font-black uppercase tracking-widest animate-pulse">Iniciando Obra Go...</p>
-  //     </div>
-  //   );
-  // }
-
-  // Si allowGuest es true, dejamos pasar aunque no haya user
   if (!user && !allowGuest) {
     return <Navigate to="/login" replace />;
   }
 
   return <>{children}</>;
 };
-
 
 function App() {
   return (
@@ -55,10 +43,8 @@ function App() {
           <Route path="/history" element={<ProtectedRoute><History /></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
           
-          {/* Catch all */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-        <SupportWidget />
         </Router>
       </AuthProvider>
     </div>

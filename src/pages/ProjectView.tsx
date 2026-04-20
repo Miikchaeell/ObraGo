@@ -12,6 +12,7 @@ import {
   Image as ImageIcon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AdSenseSlot } from "@/components/AdSenseSlot";
 import { motion } from "framer-motion";
 
 export default function ProjectView() {
@@ -180,6 +181,10 @@ export default function ProjectView() {
             )}
         </section>
 
+        {/* [v7.0] Monetization Slot */}
+        <div className="px-6 py-8">
+            <AdSenseSlot id="project-view-ads" className="w-full" />
+        </div>
       </main>
     </div>
   );

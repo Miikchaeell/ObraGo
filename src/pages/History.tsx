@@ -13,6 +13,7 @@ import {
   Crown
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AdSenseSlot } from "@/components/AdSenseSlot";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface Scan {
@@ -185,6 +186,11 @@ export default function History() {
             </AnimatePresence>
           </div>
         )}
+
+        {/* [v7.0] Monetization Slot */}
+        <div className="py-6 pt-10">
+            <AdSenseSlot id="history-footer-ads" className="w-full" />
+        </div>
       </main>
 
       {/* Plan Info Overlay */}

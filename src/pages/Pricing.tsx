@@ -3,6 +3,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { Check, Shield, Loader2 } from "lucide-react";
+import { AdSenseSlot } from "@/components/AdSenseSlot";
 
 const plans = [
   {
@@ -170,6 +171,11 @@ export default function Pricing() {
           <Button variant="outline" onClick={() => window.location.href = "/"} className="h-12 px-8 rounded-xl font-bold">
             Volver a la App
           </Button>
+        </div>
+
+        {/* [v7.0] Monetization Slot */}
+        <div className="py-10">
+            <AdSenseSlot id="pricing-banner-ads" className="w-full" />
         </div>
       </div>
     </div>
