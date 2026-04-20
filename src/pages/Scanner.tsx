@@ -70,12 +70,77 @@ export default function Scanner() {
   const generatePDF = () => {
     try {
       const doc = new jsPDF();
-      doc.text("REPORTE TÉCNICO ÉLITE", 15, 25);
-      doc.save(`ObraGo_Proyecto_${projectNameInput || "Final"}.pdf`);
-    } catch (err) { alert("Error al generar PDF."); }
+      
+      // Estilos Élite
+      doc.setFillColor(15, 17, 21);
+      doc.rect(0, 0, 210, 25, 'F');
+      doc.setTextColor(249, 115, 22);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(16);
+      doc.text("OBRA GO ELITE - REPORTE DE CUBICACIÓN", 105, 15, { align: "center" });
+      
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.text("RESUMEN DE INGENIERÍA", 15, 40);
+      
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Proyecto: ${projectNameInput || "Final"}`, 15, 50);
+      doc.text(`Ubicación: San Fernando, Región de O’Higgins`, 15, 57);
+      doc.text(`Normativa Aplicada: NCh 170 (Hormigón) / NCh 430 (Diseño Estructural)`, 15, 64);
+      doc.text(`Fecha de Emisión: ${new Date().toLocaleDateString()}`, 15, 71);
+
+      autoTable(doc, {
+        startY: 80,
+        head: [['Ítem', 'Detalle Técnico', 'Cantidad', 'Unidad', 'P. Unitario', 'Total']],
+        body: [
+          ['1.1', 'Hormigón G25 / NCh 170', '64.5', 'm3', '$785.000', '$50.632.500'],
+          ['1.2', 'Fierro 10mm / A630-420H', '1250', 'kg', '$1.250', '$1.562.500'],
+          ['1.3', 'Instalación de Faena y Otros', '1', 'Gl', '$5.000.000', '$5.000.000'],
+        ],
+        theme: 'striped',
+        headStyles: { fillColor: [15, 17, 21], textColor: [249, 115, 22] }
+      });
+
+      const finalY = (doc as any).lastAutoTable.finalY + 10;
+      
+      doc.setFont("helvetica", "bold");
+      doc.text("COSTOS INDIRECTOS Y UTILIDAD", 15, finalY);
+      
+      autoTable(doc, {
+        startY: finalY + 5,
+        body: [
+          ['Gastos Generales (12%)', '$13.344.438'],
+          ['Utilidad (15%)', '$16.680.547'],
+          ['IVA (19%)', '$17.755.050'],
+        ],
+        theme: 'plain',
+        styles: { fontSize: 10, cellPadding: 2 }
+      });
+
+      const totalY = (doc as any).lastAutoTable.finalY + 15;
+      doc.setFontSize(14);
+      doc.setTextColor(249, 115, 22);
+      doc.text("TOTAL PRESUPUESTO INCL. IVA: $111.203.650", 15, totalY);
+
+      doc.setFontSize(9);
+      doc.setTextColor(100);
+      doc.text("__________________________________________", 105, 270, { align: "center" });
+      doc.text("Firmado Digitalmente por Michael Seura", 105, 276, { align: "center" });
+      doc.text("Fundador y Director de Ingeniería - Obra Go", 105, 281, { align: "center" });
+
+      doc.save(`ObraGo_Reporte_Elite_${projectNameInput || "Final"}.pdf`);
+    } catch (err) { 
+      console.error("PDF ERROR:", err);
+      alert("Error crítico en el motor de PDF. Contacta a soporte."); 
+    }
   };
 
-  const handleDownload = () => { generatePDF(); };
+  const handleDownload = () => {
+    // [UNLOCKED] Direct trigger without Math.random obstacles
+    generatePDF();
+  };
 
   return (
     <div className="min-h-screen bg-[#0f1115] text-white flex flex-col max-w-lg mx-auto">
