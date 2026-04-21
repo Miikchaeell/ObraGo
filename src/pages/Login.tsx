@@ -1,19 +1,37 @@
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { LogIn, ShieldCheck } from "lucide-react";
+import { LogIn, ShieldCheck, Mail, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 
 export default function Login() {
-  const { signInWithGoogle } = useAuth();
+  const { signInWithGoogle, login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
 
   const handleGoogleLogin = async () => {
     setIsLoading(true);
+    setError("");
     try {
       await signInWithGoogle();
     } catch (error) {
       console.error("Error signing in with Google:", error);
+      setError("Fallo al entrar con Google");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleEmailLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError("");
+    try {
+      await login(email, password);
+    } catch (err: any) {
+      setError(err.message || "Credenciales inválidas");
     } finally {
       setIsLoading(false);
     }
@@ -49,7 +67,7 @@ export default function Login() {
         <div className="bg-[#1c1f26]/80 backdrop-blur-xl border border-white/5 rounded-[48px] p-10 shadow-2xl relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 blur-[80px] -mr-16 -mt-16" />
           
-          <div className="relative z-10 space-y-10">
+          <div className="relative z-10 space-y-8">
             <div className="text-center space-y-2">
               <h2 className="text-3xl font-black tracking-tight text-white mb-2">Bienvenido</h2>
               <div className="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 border border-primary/20 rounded-full">
@@ -58,40 +76,56 @@ export default function Login() {
               </div>
             </div>
 
-            <div className="space-y-6">
-              <Button 
-                onClick={handleGoogleLogin}
-                disabled={isLoading}
-                className="w-full h-18 rounded-[24px] bg-white hover:bg-slate-100 text-black font-black text-lg gap-3 transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-xl"
-              >
-                {isLoading ? (
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
-                    className="w-6 h-6 border-2 border-black/20 border-t-black rounded-full"
+            <form onSubmit={handleEmailLogin} className="space-y-4">
+              <div className="space-y-2">
+                <div className="relative">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                  <input 
+                    type="email" 
+                    placeholder="Email" 
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className="w-full h-14 bg-white/5 border border-white/10 rounded-2xl pl-12 pr-4 text-sm text-white focus:outline-none focus:border-primary/50 transition-all"
                   />
-                ) : (
-                  <>
-                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-6 h-6" alt="Google" />
-                    ENTRAR CON GOOGLE
-                  </>
-                )}
-              </Button>
-
-              <div className="p-5 bg-black/40 rounded-3xl border border-white/5 space-y-3">
-                <div className="flex gap-4">
-                  <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
-                    <LogIn className="w-5 h-5 text-primary" />
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-[11px] font-bold text-white uppercase tracking-wide">Acceso Seguro</p>
-                    <p className="text-[10px] leading-relaxed text-slate-500 font-medium">
-                      Tu identidad está protegida por los protocolos de encriptación de Obra Go y Google Cloud.
-                    </p>
-                  </div>
+                </div>
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                  <input 
+                    type="password" 
+                    placeholder="Contraseña" 
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    className="w-full h-14 bg-white/5 border border-white/10 rounded-2xl pl-12 pr-4 text-sm text-white focus:outline-none focus:border-primary/50 transition-all"
+                  />
                 </div>
               </div>
+
+              {error && <p className="text-red-500 text-[10px] font-bold uppercase text-center">{error}</p>}
+
+              <Button 
+                type="submit"
+                disabled={isLoading}
+                className="w-full h-14 rounded-2xl bg-primary text-black font-black uppercase text-xs shadow-lg shadow-primary/20"
+              >
+                {isLoading ? "Cargando..." : "Entrar con Email"}
+              </Button>
+            </form>
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/5"></div></div>
+              <div className="relative flex justify-center text-[10px] uppercase font-black tracking-widest"><span className="bg-[#1c1f26] px-4 text-slate-500">O continúa con</span></div>
             </div>
+
+            <Button 
+              onClick={handleGoogleLogin}
+              disabled={isLoading}
+              className="w-full h-14 rounded-2xl bg-white hover:bg-slate-100 text-black font-black text-xs gap-3 shadow-xl transition-transform active:scale-95"
+            >
+              <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-6 h-6" alt="Google" />
+              GOOGLE
+            </Button>
           </div>
         </div>
 
@@ -105,3 +139,4 @@ export default function Login() {
     </div>
   );
 }
+

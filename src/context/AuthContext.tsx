@@ -12,6 +12,7 @@ interface AuthContextType {
   isLoading: boolean;
   logout: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -22,9 +23,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // 1. Verificar sesión inicial
     const checkUser = async () => {
       try {
+        // 1. Prioridad: Token del Backend Local (Persistencia Pro)
+        const savedToken = localStorage.getItem("token");
+        const savedUser = localStorage.getItem("user");
+        if (savedToken && savedUser) {
+            setUser(JSON.parse(savedUser));
+            setPlan('pro'); // Usuarios de backend local son Pro por defecto
+            setIsLoading(false);
+            return;
+        }
+
+        // 2. Fallback: Supabase
         const { data, error } = await supabase.auth.getSession();
         if (error) {
           console.warn("Supabase Auth Error:", error.message);
@@ -38,7 +49,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           });
           
           try {
-            // Fetch Real Plan from Supabase
             const { data: sub } = await supabase
               .from('subscriptions')
               .select('plan_type')
@@ -60,7 +70,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     checkUser();
 
-    // 2. Escuchar cambios de estado (Login/Logout)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         setUser({
@@ -68,14 +77,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           email: session.user.email || ''
         });
         
-        // Async plan update
         supabase.from('subscriptions')
           .select('plan_type')
           .eq('user_id', session.user.id)
           .single()
           .then(({ data }) => setPlan(data?.plan_type || 'free'));
 
-      } else {
+      } else if (!localStorage.getItem("token")) {
         setUser(null);
         setPlan(null);
       }
@@ -97,19 +105,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (error) throw error;
   };
 
+  const login = async (email: string, password: string) => {
+      const API_URL = import.meta.env.VITE_API_URL || "";
+      const response = await fetch(`${API_URL}/api/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+      });
+
+      if (!response.ok) {
+          const err = await response.json();
+          throw new Error(err.error || "Error de autenticación");
+      }
+
+      const data = await response.json();
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("user", JSON.stringify(data.user));
+      setUser(data.user);
+      setPlan('pro');
+  };
+
   const logout = async () => {
     await supabase.auth.signOut();
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
     setUser(null);
+    setPlan(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, plan, isLoading, logout, signInWithGoogle }}>
+    <AuthContext.Provider value={{ user, plan, isLoading, logout, signInWithGoogle, login }}>
       {children}
     </AuthContext.Provider>
   );
 };
 
-// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
@@ -117,4 +147,5 @@ export const useAuth = () => {
   }
   return context;
 };
+
 

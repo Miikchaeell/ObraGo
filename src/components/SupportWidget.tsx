@@ -1,43 +1,57 @@
 // @ts-nocheck
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { X, Send, ShieldCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 /**
- * RECONSTRUCCIÓN DE IDENTIDAD DE MARCA - OBRA GO V9.0
- * PERSONA: MICHAEL - FUNDADOR E INGENIERO SENIOR
+ * SISTEMA DINÁMICO DE VIDEO-AGENTES - OBRA GO V9.5
+ * REINGENIERÍA DE PRODUCCIÓN: Michael, Cristopher, Danitza, Ricardo, David
  */
 
-// Componente Avatar Pro para evitar fallos de ruta
-const TeamAvatar = ({ size = "w-12 h-12" }) => (
-  <div className={`relative ${size} shrink-0`}>
-    <div 
-      className="w-full h-full rounded-full border-2 border-[#D4AF37] bg-cover bg-center overflow-hidden shadow-xl"
-      style={{ 
-        backgroundImage: 'url("/src/assets/Agente_Michael.jpeg")', // Imagen principal de Michael
-        backgroundColor: '#1a1c22'
-      }}
-    >
-      {/* Fallback de iniciales si la carga falla */}
-      <div className="w-full h-full flex items-center justify-center text-black bg-[#D4AF37] font-black text-lg">
-        MS
-      </div>
-    </div>
-    <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-green-500 rounded-full border-2 border-[#1e222d] shadow-sm animate-pulse" />
-  </div>
-);
+const AGENTS = [
+  { name: "Michael Seura", role: "Fundador e Ingeniero Senior", video: "/videos/Michael.mp4" },
+  { name: "Cristopher", role: "Director de Operaciones", video: "/videos/Cristopher.mp4" },
+  { name: "Danitza", role: "Jefe de Ingeniería AEC", video: "/videos/Danitza.mp4" },
+  { name: "Ricardo", role: "Especialista en Normativa NCh", video: "/videos/Cristopher.mp4" }, // Fallback a Cristopher
+  { name: "David", role: "Soporte Técnico Senior", video: "/videos/David.mp4" }
+];
 
 export const SupportWidget = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [message, setMessage] = useState('');
+  const [lastTotal, setLastTotal] = useState(localStorage.getItem('lastScanTotal') || '0');
+  
+  // Rotación aleatoria del agente al montar el componente
+  const agent = useMemo(() => AGENTS[Math.floor(Math.random() * AGENTS.length)], []);
+
   const [history, setHistory] = useState([
     {
       role: 'assistant',
-      content: "¡Hola! Soy Michael de Obra Go. He validado técnicamente tu presupuesto de $111.203.650 bajo norma NCh 170. ¿Te ayudo con el análisis de materiales o prefieres bajar el Reporte Élite con el Mincho Chico detallado ahora mismo?"
+      content: `¡Hola! Soy ${agent.name} de Obra Go. He validado tu presupuesto de $${Number(lastTotal).toLocaleString('es-CL')} bajo normas NCh 170/430. ¿Prefieres revisar el desglose técnico o descargar el Reporte Élite con el APU ahora mismo?`
     }
   ]);
   const [isTyping, setIsTyping] = useState(false);
   const scrollRef = useRef(null);
+
+  // Escuchar actualizaciones del presupuesto desde el Scanner
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const newTotal = localStorage.getItem('lastScanTotal');
+      if (newTotal && newTotal !== lastTotal) {
+        setLastTotal(newTotal);
+        // Actualizar el primer mensaje si cambia el presupuesto
+        setHistory(prev => [
+            {
+                role: 'assistant',
+                content: `¡Hola! Soy ${agent.name} de Obra Go. He validado tu presupuesto de $${Number(newTotal).toLocaleString('es-CL')} bajo normas NCh 170/430. ¿Te ayudo con el desglose o prefieres el Reporte Élite?`
+            },
+            ...prev.slice(1)
+        ]);
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, [lastTotal, agent]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -59,7 +73,11 @@ export const SupportWidget = () => {
         body: JSON.stringify({ 
           message: userMessage.content, 
           history: history.slice(-3),
-          metadata: { assignedEngineer: "Michael Seura" }
+          metadata: { 
+              assignedEngineer: agent.name,
+              engineerRole: agent.role,
+              totalCost: lastTotal
+          }
         }),
       });
       const data = await response.json();
@@ -79,21 +97,37 @@ export const SupportWidget = () => {
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className="mb-4 w-[400px] h-[600px] bg-[#1a1c22]/98 border border-white/10 rounded-[32px] overflow-hidden flex flex-col shadow-[0_32px_64px_-12px_rgba(0,0,0,0.8)] backdrop-blur-3xl"
+            className="mb-4 w-[400px] h-[650px] bg-[#1a1c22]/90 border border-white/10 rounded-[40px] overflow-hidden flex flex-col shadow-[0_32px_64px_-12px_rgba(0,0,0,0.8)] backdrop-blur-3xl"
           >
-            {/* Header Persona */}
-            <div className="p-6 bg-[#1e222d] border-b border-white/5 flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <TeamAvatar />
+            {/* Header Persona con Video */}
+            <div className="p-0 bg-black/20 border-b border-white/5 relative h-48 overflow-hidden">
+              <video 
+                src={agent.video} 
+                autoPlay 
+                muted 
+                loop 
+                playsInline 
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#1a1c22] via-transparent to-transparent" />
+              
+              <div className="absolute bottom-4 left-6 flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl border-2 border-[#D4AF37] overflow-hidden shadow-2xl bg-black">
+                   {/* Mini avatar static fallback inside video area */}
+                   <div className="w-full h-full flex items-center justify-center text-[#D4AF37] font-black text-xs">
+                        {agent.name.split(' ').map(n => n[0]).join('')}
+                   </div>
+                </div>
                 <div>
-                  <h3 className="text-white font-black text-sm tracking-tight leading-none">Michael Seura</h3>
-                  <p className="text-[10px] text-[#D4AF37] font-black uppercase tracking-widest mt-1.5 flex items-center gap-1">
-                    <ShieldCheck className="w-3 h-3" /> Fundador e Ingeniero Senior
+                  <h3 className="text-white font-black text-base tracking-tight leading-none">{agent.name}</h3>
+                  <p className="text-[9px] text-[#D4AF37] font-black uppercase tracking-widest mt-2 flex items-center gap-1">
+                    <ShieldCheck className="w-3 h-3" /> {agent.role}
                   </p>
                 </div>
               </div>
-              <button onClick={() => setIsOpen(false)} className="p-2 hover:bg-white/5 rounded-xl transition-all">
-                <X className="w-6 h-6 text-white/50" />
+
+              <button onClick={() => setIsOpen(false)} className="absolute top-4 right-4 p-2 bg-black/40 hover:bg-black/60 rounded-full transition-all backdrop-blur-md border border-white/10">
+                <X className="w-5 h-5 text-white" />
               </button>
             </div>
 
@@ -101,30 +135,32 @@ export const SupportWidget = () => {
             <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-hide">
               {history.map((msg, i) => (
                 <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[85%] p-4 rounded-2xl text-sm leading-relaxed shadow-lg ${
-                    msg.role === 'user' ? 'bg-[#D4AF37] text-black font-bold' : 'bg-white/5 text-white/90 border border-white/5'
+                  <div className={`max-w-[85%] p-4 rounded-3xl text-sm leading-relaxed shadow-lg ${
+                    msg.role === 'user' 
+                    ? 'bg-[#D4AF37] text-black font-bold rounded-tr-none' 
+                    : 'bg-white/5 text-white/90 border border-white/5 rounded-tl-none backdrop-blur-md'
                   }`}>
                     {msg.content}
                   </div>
                 </div>
               ))}
-              {isTyping && <div className="text-[10px] text-gray-500 font-bold uppercase animate-pulse">Michael está escribiendo...</div>}
+              {isTyping && <div className="text-[10px] text-[#D4AF37] font-black uppercase animate-pulse">Michael está escribiendo...</div>}
             </div>
 
-            {/* Input Area */}
-            <div className="p-4 bg-black/40 border-t border-white/5">
-              <div className="flex gap-2">
+            {/* Input Area Glassmorphism */}
+            <div className="p-6 bg-white/5 border-t border-white/10 backdrop-blur-md">
+              <div className="flex gap-3">
                 <input
                   type="text"
-                  placeholder="Hablemos de tu presupuesto AEC..."
-                  className="flex-1 bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-sm text-white focus:outline-none focus:border-[#D4AF37] transition-all"
+                  placeholder="Escribe tu consulta AEC..."
+                  className="flex-1 bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-sm text-white focus:outline-none focus:border-[#D4AF37] transition-all placeholder:text-gray-600"
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleSend()}
                 />
                 <button
                   onClick={handleSend}
-                  className="w-14 h-14 bg-[#D4AF37] text-black rounded-2xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all"
+                  className="w-14 h-14 bg-[#D4AF37] text-black rounded-2xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-lg shadow-[#D4AF37]/20"
                 >
                   <Send className="w-5 h-5" />
                 </button>
@@ -134,14 +170,22 @@ export const SupportWidget = () => {
         )}
       </AnimatePresence>
 
-      <button
+      <motion.button
+        whileHover={{ scale: 1.05, rotate: 5 }}
+        whileTap={{ scale: 0.95 }}
         onClick={() => setIsOpen(!isOpen)}
-        className="w-16 h-16 rounded-[22px] bg-[#D4AF37] text-black shadow-2xl flex items-center justify-center hover:rotate-6 active:scale-95 transition-all duration-500 overflow-hidden"
+        className="w-20 h-20 rounded-[28px] bg-[#D4AF37] text-black shadow-[0_20px_40px_rgba(0,0,0,0.4)] flex items-center justify-center overflow-hidden border-4 border-black/20"
       >
-        {isOpen ? <X className="w-8 h-8" /> : <img src="/src/assets/Agente_Michael.jpeg" alt="Soporte" className="w-full h-full object-cover" />}
-      </button>
+        {isOpen ? <X className="w-10 h-10" /> : (
+            <div className="w-full h-full relative">
+                <video src={agent.video} autoPlay muted loop playsInline className="w-full h-full object-cover scale-150" />
+                <div className="absolute inset-0 bg-[#D4AF37]/10" />
+            </div>
+        )}
+      </motion.button>
     </div>
   );
 };
 
 export default SupportWidget;
+
