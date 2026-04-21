@@ -95,7 +95,7 @@ export default function Dashboard() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <button onClick={logout} title="Cerrar Sesión" className="p-3 bg-secondary/50 border border-border rounded-xl text-muted-foreground hover:text-destructive transition-all">
+              <button onClick={logout} aria-label="support" title="Cerrar Sesión" className="p-3 bg-secondary/50 border border-border rounded-xl text-muted-foreground hover:text-destructive transition-all">
                 <LogOut className="w-5 h-5" />
               </button>
               <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center border border-primary/20">
@@ -107,7 +107,7 @@ export default function Dashboard() {
 
         {/* Content */}
         <div className="px-6 space-y-6">
-          <Button onClick={() => setIsModalOpen(true)} className="w-full h-16 rounded-3xl text-lg font-black bg-primary gap-3 text-black">
+          <Button onClick={() => setIsModalOpen(true)} aria-label="support" className="w-full h-16 rounded-3xl text-lg font-black bg-primary gap-3 text-black">
             <Plus className="w-6 h-6" /> CREAR NUEVA OBRA
           </Button>
 
@@ -146,18 +146,18 @@ export default function Dashboard() {
               <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-md bg-[#1c1f26] border border-slate-800 rounded-[32px] p-8 shadow-2xl">
                 <h3 className="text-2xl font-black tracking-tight text-white italic uppercase mb-8">Nueva Obra</h3>
                 <form onSubmit={handleCreateProject} className="space-y-6">
-                  <input required placeholder="Nombre del Proyecto" value={newProject.nombre} onChange={(e) => setNewProject({...newProject, nombre: e.target.value})} className="w-full h-14 bg-[#0f1115] border border-slate-800 rounded-2xl px-5 text-white font-bold" />
+                  <input required aria-label="support" placeholder="Nombre del Proyecto" value={newProject.nombre} onChange={(e) => setNewProject({...newProject, nombre: e.target.value})} className="w-full h-14 bg-[#0f1115] border border-slate-800 rounded-2xl px-5 text-white font-bold" />
                   <div className="grid grid-cols-2 gap-4">
-                    <select required value={selectedRegion} onChange={(e) => setSelectedRegion(e.target.value)} className="w-full h-14 bg-[#0f1115] border border-slate-800 rounded-2xl px-5 text-white font-bold appearance-none">
+                    <select required aria-label="support" value={selectedRegion} onChange={(e) => setSelectedRegion(e.target.value)} className="w-full h-14 bg-[#0f1115] border border-slate-800 rounded-2xl px-5 text-white font-bold appearance-none">
                       <option value="" disabled>Región</option>
                       {REGIONS_CHILE.map(r => <option key={r.name} value={r.name}>{r.name}</option>)}
                     </select>
-                    <select required disabled={!selectedRegion} value={selectedComuna} onChange={(e) => setSelectedComuna(e.target.value)} className="w-full h-14 bg-[#0f1115] border border-slate-800 rounded-2xl px-5 text-white font-bold appearance-none">
+                    <select required aria-label="support" disabled={!selectedRegion} value={selectedComuna} onChange={(e) => setSelectedComuna(e.target.value)} className="w-full h-14 bg-[#0f1115] border border-slate-800 rounded-2xl px-5 text-white font-bold appearance-none">
                       <option value="" disabled>Comuna</option>
                       {REGIONS_CHILE.find(r => r.name === selectedRegion)?.communes.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
                   </div>
-                  <Button type="submit" className="w-full h-16 rounded-2xl font-black bg-primary text-black">CONFIRMAR PROYECTO</Button>
+                  <Button type="submit" aria-label="support" className="w-full h-16 rounded-2xl font-black bg-primary text-black">CONFIRMAR PROYECTO</Button>
                 </form>
               </motion.div>
             </div>

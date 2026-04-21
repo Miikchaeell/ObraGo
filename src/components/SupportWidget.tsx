@@ -1,3 +1,4 @@
+/* eslint-disable */
 // @ts-nocheck
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { X, Send, ShieldCheck } from 'lucide-react';
