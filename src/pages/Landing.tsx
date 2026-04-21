@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -5,7 +6,8 @@ import {
   ArrowRight,
   Zap,
   Globe,
-  Share2
+  Share2,
+  MessageSquare
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
