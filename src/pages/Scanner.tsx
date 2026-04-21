@@ -32,7 +32,7 @@ const generateElitePDF = (projectName, scanData, costData, materials) => {
     doc.text(`Proyecto: ${projectName || "Obra Nueva"}`, 15, 50);
     doc.text(`Elemento Analizado: ${scanResult?.partida || "No especificado"}`, 15, 57);
     doc.text(`Fecha de Emisión: ${new Date().toLocaleDateString()}`, 15, 64);
-    doc.text(`Ingeniero Responsable: Michael Seura - Senior Engineer`, 15, 71);
+    doc.text(`Ingeniero Responsable: Michael - Senior Engineer`, 15, 71);
 
     // Tabla de materiales calculados con 5% de pérdida
     autoTable(doc, {
@@ -83,7 +83,7 @@ const generateElitePDF = (projectName, scanData, costData, materials) => {
     doc.setFont("courier", "bolditalic");
     doc.setFontSize(10);
     doc.text("__________________________", 105, finalY, { align: "center" });
-    doc.text("Firmado Digitalmente por Michael Seura", 105, finalY + 8, { align: "center" });
+    doc.text("Firmado Digitalmente por Michael", 105, finalY + 8, { align: "center" });
     doc.text("Fundador e Ingeniero Senior Obra Go", 105, finalY + 14, { align: "center" });
     doc.text(`ID Validación: AEC-${Math.random().toString(36).substring(7).toUpperCase()}`, 105, finalY + 20, { align: "center" });
 

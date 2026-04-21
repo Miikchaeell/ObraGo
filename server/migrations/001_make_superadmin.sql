@@ -8,4 +8,4 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS is_superadmin BOOLEAN DEFAULT false;
 UPDATE users SET 
     role = 'superadmin', 
     status = 'approved'
-WHERE email = 'michael.seura.delgado@gmail.com';
+WHERE email = 'michael@obrago.cl';

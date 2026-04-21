@@ -9,7 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion';
  */
 
 const AGENTS = [
-  { name: "Michael Seura", role: "Fundador e Ingeniero Senior", video: "/videos/Michael.mp4" },
+  { name: "Michael", role: "Fundador e Ingeniero Senior", video: "/videos/Michael.mp4" },
   { name: "Cristopher", role: "Director de Operaciones", video: "/videos/Cristopher.mp4" },
   { name: "Danitza", role: "Jefe de Ingeniería AEC", video: "/videos/Danitza.mp4" },
   { name: "Ricardo", role: "Especialista en Normativa NCh", video: "/videos/Cristopher.mp4" }, // Fallback a Cristopher

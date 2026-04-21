@@ -6,7 +6,7 @@ import FormData from 'form-data';
 const JWT_SECRET = 'obra-super-secret-key';
 const MOCK_USER = {
   id: '00000000-0000-0000-0000-000000000000',
-  email: 'michael.seura.delgado@gmail.com',
+  email: 'michael@obrago.cl',
   role: 'admin',
   status: 'approved'
 };

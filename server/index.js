@@ -111,7 +111,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'obra-super-secret-key';
 // [v7.0] Mock Database for Local Development (Offline Mode)
 const MOCK_USER = {
   id: '00000000-0000-0000-0000-000000000000',
-  email: 'michael.seura.delgado@gmail.com',
+  email: 'michael@obrago.cl',
   password_hash: '$2a$10$X8O9.v2s/6rYV8yG1v8yEuG9yG9yG9yG9yG9yG9yG9yG9yG9y', // hash for '123456'
   password_plain: '123456',
   role: 'admin',
@@ -467,7 +467,7 @@ app.post('/api/auth/register', async (req, res) => {
     );
 
     // [v3.0] Notify Admin
-    const adminEmail = 'michael.seura.delgado@gmail.com';
+    const adminEmail = 'michael@obrago.cl';
     const backendUrl = process.env.BACKEND_URL || 'http://localhost:4000';
     const approveLink = `${backendUrl}/api/admin/user-action?userId=${user.id}&action=approved&token=${JWT_SECRET}`;
     const rejectLink = `${backendUrl}/api/admin/user-action?userId=${user.id}&action=rejected&token=${JWT_SECRET}`;
