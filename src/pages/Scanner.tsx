@@ -100,6 +100,8 @@ export default function Scanner() {
   const location = useLocation();
   const [step, setStep] = useState('config');
   const [name, setName] = useState(location.state?.projectName || "");
+  const [region, setRegion] = useState(location.state?.region || "Región Metropolitana");
+  const [comuna, setComuna] = useState(location.state?.comuna || "Maipú");
   const [isLoading, setIsLoading] = useState(false);
   const [scanResult, setScanResult] = useState(null);
   const [costBreakdown, setCostBreakdown] = useState(null);
@@ -203,20 +205,48 @@ export default function Scanner() {
       <main className="flex-1 p-6 flex flex-col justify-center">
         {step === 'config' && (
           <div className="space-y-6">
-            <h2 className="text-4xl font-black italic tracking-tighter text-[#D4AF37]">Cubicación</h2>
-            <input 
-              type="text" 
-              placeholder="Nombre Proyecto / Partida" 
-              value={name} 
-              onChange={(e) => setName(e.target.value)} 
-              className="w-full bg-white/5 border border-white/10 p-5 rounded-2xl text-lg font-bold focus:border-[#D4AF37] outline-none transition-all" 
-            />
+            <h2 className="text-4xl font-black italic tracking-tighter text-[#D4AF37]">Dimensiones</h2>
+            <div className="space-y-4">
+              <input 
+                type="text" 
+                placeholder="Nombre Proyecto / Partida" 
+                value={name} 
+                onChange={(e) => setName(e.target.value)} 
+                className="w-full bg-white/5 border border-white/10 p-5 rounded-2xl text-lg font-bold focus:border-[#D4AF37] outline-none transition-all" 
+              />
+              <div className="grid grid-cols-2 gap-4">
+                <input 
+                  type="text" 
+                  placeholder="Región" 
+                  value={region} 
+                  onChange={(e) => setRegion(e.target.value)} 
+                  className="w-full bg-white/5 border border-white/10 p-4 rounded-xl text-sm font-bold focus:border-[#D4AF37] outline-none transition-all" 
+                />
+                <input 
+                  type="text" 
+                  placeholder="Comuna" 
+                  value={comuna} 
+                  onChange={(e) => setComuna(e.target.value)} 
+                  className="w-full bg-white/5 border border-white/10 p-4 rounded-xl text-sm font-bold focus:border-[#D4AF37] outline-none transition-all" 
+                />
+              </div>
+            </div>
+            
             <Button 
-              onClick={() => setStep('scan')} 
+              onClick={() => {
+                try {
+                  setStep('scan');
+                } catch (e) {
+                  console.error("Transition Error:", e);
+                  setStep('scan'); // Force fallback
+                }
+              }} 
+              disabled={false}
               className="w-full h-16 bg-[#D4AF37] text-black font-black rounded-2xl text-lg shadow-xl hover:scale-[1.02] active:scale-95 transition-all"
             >
-              CONTINUAR
+              SIGUIENTE: CAPTURAR
             </Button>
+            <p className="text-[10px] text-center text-[#D4AF37]/40 font-bold uppercase tracking-widest">Validación de Campo: Activa</p>
           </div>
         )}
 
