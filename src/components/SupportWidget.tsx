@@ -28,7 +28,7 @@ export const SupportWidget = () => {
   const [history, setHistory] = useState([
     {
       role: 'assistant',
-      content: `¡Hola! Soy ${agent.name} de Obra Go. He validado tu presupuesto de $${Number(lastTotal).toLocaleString('es-CL')} bajo normas NCh 170/430. ¿Prefieres revisar el desglose técnico o descargar el Reporte Élite con el APU ahora mismo?`
+      content: `¡Hola! Soy Michael de Obra Go. Ya validé tu presupuesto de $${Number(lastTotal).toLocaleString('es-CL')}. ¿Te ayudo con el APU o prefieres bajar el Reporte Élite por $2.990 ahora?`
     }
   ]);
   const [isTyping, setIsTyping] = useState(false);
@@ -44,7 +44,7 @@ export const SupportWidget = () => {
         setHistory(prev => [
             {
                 role: 'assistant',
-                content: `¡Hola! Soy ${agent.name} de Obra Go. He validado tu presupuesto de $${Number(newTotal).toLocaleString('es-CL')} bajo normas NCh 170/430. ¿Te ayudo con el desglose o prefieres el Reporte Élite?`
+                content: `¡Hola! Soy Michael de Obra Go. Ya validé tu presupuesto de $${Number(newTotal).toLocaleString('es-CL')}. ¿Te ayudo con el APU o prefieres bajar el Reporte Élite por $2.990 ahora?`
             },
             ...prev.slice(1)
         ]);
@@ -113,11 +113,8 @@ export const SupportWidget = () => {
               <div className="absolute inset-0 bg-gradient-to-t from-[#1a1c22] via-transparent to-transparent" />
               
               <div className="absolute bottom-4 left-6 flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl border-2 border-[#D4AF37] overflow-hidden shadow-2xl bg-black">
-                   {/* Mini avatar static fallback inside video area */}
-                   <div className="w-full h-full flex items-center justify-center text-[#D4AF37] font-black text-xs">
-                        {agent.name.split(' ').map(n => n[0]).join('')}
-                   </div>
+                <div className="w-12 h-12 rounded-2xl border-2 border-[#D4AF37] overflow-hidden shadow-2xl bg-[#D4AF37] flex items-center justify-center">
+                    <span className="text-black font-black text-lg">MS</span>
                 </div>
                 <div>
                   <h3 className="text-white font-black text-base tracking-tight leading-none">{agent.name}</h3>

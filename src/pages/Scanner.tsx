@@ -190,6 +190,7 @@ export default function Scanner() {
     }
   };
 
+  // @ts-ignore
   const handleDownload = () => {
     generateElitePDF(name, scanResult, costBreakdown, materials);
   };
