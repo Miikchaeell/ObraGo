@@ -909,6 +909,16 @@ app.post('/api/analyze', authenticateToken, upload.array('images', 10), async (r
               },
               green_score: 4
             },
+            weather_risk: {
+              status: "warning",
+              alert: "Riesgo de Helada Nocturna",
+              recommendation: "Se recomienda cubrir el hormigón con manta térmica después de las 20:00 hrs."
+            },
+            dispute_analysis: {
+              changes_detected: "Avance del 20% en enfierradura respecto al escaneo anterior.",
+              damage_identified: "Ninguno",
+              mediator_verdict: "Partida aprobada para avance de obra."
+            },
             calidad_analisis: { iluminacion: "buena", enfoque: "nitido", advertencia: "MODO MOCK" },
             alternativas: ["tabique_st"],
             recomendacion_cuadrilla: "1 Maestro + 2 Ayudantes",
@@ -937,43 +947,35 @@ app.post('/api/analyze', authenticateToken, upload.array('images', 10), async (r
         };
       });
 
-      const systemPrompt = `Eres un Ingeniero Civil de Terreno experto en Obra Go, analista de planos, Prevencionista de Riesgos y Especialista en Green Tech. 
-      Analiza estas fotografías o planos de obra e identifica partidas como: Radieres, Cierros, Excavaciones, Muros o Estructuras de Techumbre.
-      
+      const systemPrompt = `Eres un Ingeniero Civil de Terreno experto en Obra Go, Prevencionista de Riesgos y Auditor de Calidad. 
+      Analiza estas fotografías o planos de obra e identifica partidas y riesgos.
+
       ESTRATEGIA DE ANÁLISIS:
-      1. Si es un plano 2D, extrae las áreas, ejes y perímetros para estimar las dimensiones (Largo, Ancho, Espesor).
-      2. Si son fotos reales, fusiona el contexto de todas las fotos para encontrar la partida dominante.
-      3. AUDITORÍA DE SEGURIDAD (PRP): Analiza si los trabajadores (si hay) usan casco, chaleco y zapatos de seguridad. Identifica riesgos.
-      4. ANÁLISIS AMBIENTAL AVANZADO (V16.0): 
-         - Estima la huella de CO2 (kg).
-         - Estima el volumen de residuos (m3).
-         - POTENCIAL SOLAR: Si es techo/losa, estima m2 útiles y kWh/mes potenciales.
-         - ALTERNATIVA BIO: Recomienda un material bio-basado (celulosa, cáñamo, CLT) para la partida.
-         - AHORRO TÉRMICO: Estima el % de ahorro en energía si se usa aislación premium vs estándar.
-         - LOGÍSTICA: Estima el peso total (kg) y el tipo de camión ideal (3/4, Tolva, Simple) para evitar viajes vacíos.
-      5. No devuelvas valores genéricos si puedes aproximar la realidad.
-      6. Devuelve un JSON estricto con dimensiones, seguridad e impacto ambiental avanzado.
+      1. IDENTIFICACIÓN Y CUBICACIÓN: (Dimensiones, Partida).
+      2. AUDITORÍA DE SEGURIDAD (PRP): (Casco, riesgos de caída, etc).
+      3. ANÁLISIS AMBIENTAL: (CO2, residuos, potencial solar).
+      4. PROTECTOR DE CLIMA (NUEVO): Evalúa la criticidad del clima actual/futuro para esta partida específica (ej: Hormigonado + Lluvia/Helada = Peligro).
+      5. MEDIADOR DE DISPUTAS: Si se proporcionan imágenes de "Antes" y "Después", identifica diferencias, daños o avances técnicos.
 
       IDS PERMITIDOS: [radier_estandar, tabique_st, cielo_falso_st, cie_prov_osb, techumbre_zinc, albañileria_ladrillo].
       
       FORMATO JSON:
       {
-        "partida": "Nombre detectado",
-        "subtipo": "Descripción detallada",
-        "sistema_id": "ID_DEL_CATALOGO",
-        "dimensiones": { "largo": X, "ancho": Y, "espesor": Z, "alto": W },
+        "partida": "...",
+        "subtipo": "...",
+        "sistema_id": "...",
+        "dimensiones": { ... },
         "safety_analysis": { ... },
-        "environmental_impact": {
-           "co2_kg": X,
-           "waste_m3": Y,
-           "green_tech_expansion": {
-              "solar_kwh_month": X,
-              "bio_alternative": "...",
-              "thermal_savings_percent": X,
-              "logistics_total_weight_kg": Y,
-              "recommended_truck": "..."
-           },
-           "green_score": 1-5
+        "environmental_impact": { ... },
+        "weather_risk": {
+           "status": "clear" | "warning" | "danger",
+           "alert": "Título de la alerta",
+           "recommendation": "Acción inmediata..."
+        },
+        "dispute_analysis": {
+           "changes_detected": "...",
+           "damage_identified": "...",
+           "mediator_verdict": "..."
         },
         "confianza": 0.XX,
         "is_fallback": boolean,
@@ -1038,6 +1040,11 @@ app.post('/api/analyze', authenticateToken, upload.array('images', 10), async (r
             recommended_truck: "No determinado"
           },
           green_score: 3
+        },
+        weather_risk: {
+          status: "clear",
+          alert: "Clima estable",
+          recommendation: "Sin alertas climáticas para esta partida."
         },
         confidence: 0.3,
         is_fallback: true,

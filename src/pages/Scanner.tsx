@@ -2,7 +2,7 @@
 // @ts-nocheck
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
-import { ChevronLeft, RotateCcw, Camera, Loader2, CheckCircle2, Mic, CreditCard, Share2, Zap, Download, FileText, ShieldAlert, ShieldCheck, ShoppingCart, Lock, Leaf, Droplets, Recycle, Sun, Truck, Thermometer } from "lucide-react";
+import { ChevronLeft, RotateCcw, Camera, Loader2, CheckCircle2, Mic, CreditCard, Share2, Zap, Download, FileText, ShieldAlert, ShieldCheck, ShoppingCart, Lock, Leaf, Droplets, Recycle, Sun, Truck, Thermometer, CloudLightning, Gavel } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -111,6 +111,17 @@ const generateElitePDF = (projectName, scanResult, costBreakdown, materials, use
     doc.text("Firmado Digitalmente por ObraGo", 150, finalY + 8, { align: "center" });
     doc.text("Fundador e Ingeniero Senior Obra Go", 150, finalY + 14, { align: "center" });
     doc.text(`ID Validación: AEC-${Math.random().toString(36).substring(7).toUpperCase()}`, 150, finalY + 20, { align: "center" });
+
+    // [v17.0] ALERTAS CRÍTICAS (CLIMA Y MEDIACIÓN)
+    if (scanResult?.weather_risk && scanResult.weather_risk.status !== 'clear') {
+      doc.setFillColor(255, 243, 224);
+      doc.rect(15, finalY + 30, 180, 20, 'F');
+      doc.setFontSize(10);
+      doc.setTextColor(230, 81, 0);
+      doc.text(`ALERTA CLIMÁTICA: ${scanResult.weather_risk.alert}`, 20, finalY + 38);
+      doc.setFontSize(8);
+      doc.text(scanResult.weather_risk.recommendation, 20, finalY + 44);
+    }
 
     if (blockchainHash) {
       doc.setFontSize(7);
@@ -683,10 +694,28 @@ export default function Scanner() {
                   </div>
               </div>
 
-              {blockchainHash && (
-                <div className="mt-6 flex items-center justify-center gap-2 bg-blue-500/10 border border-blue-500/20 py-2 rounded-xl">
-                   <Lock className="w-3 h-3 text-blue-400" />
-                   <p className="text-[8px] text-blue-400 font-black uppercase tracking-widest">Evidencia Protegida por Blockchain</p>
+              {scanResult.weather_risk && scanResult.weather_risk.status !== 'clear' && (
+                <div className={`mt-4 p-4 rounded-2xl border ${scanResult.weather_risk.status === 'danger' ? 'bg-red-500/20 border-red-500/50 animate-pulse' : 'bg-yellow-500/20 border-yellow-500/50'}`}>
+                   <div className="flex items-center gap-2 mb-1">
+                      <CloudLightning className={`w-5 h-5 ${scanResult.weather_risk.status === 'danger' ? 'text-red-400' : 'text-yellow-400'}`} />
+                      <p className={`text-xs font-black uppercase tracking-tighter ${scanResult.weather_risk.status === 'danger' ? 'text-red-400' : 'text-yellow-400'}`}>
+                        {scanResult.weather_risk.alert}
+                      </p>
+                   </div>
+                   <p className="text-[11px] text-white font-bold">{scanResult.weather_risk.recommendation}</p>
+                </div>
+              )}
+
+              {scanResult.dispute_analysis && scanResult.dispute_analysis.changes_detected && (
+                <div className="mt-4 p-4 bg-purple-500/10 border border-purple-500/30 rounded-2xl">
+                   <div className="flex items-center gap-2 mb-2">
+                      <Gavel className="w-4 h-4 text-purple-400" />
+                      <p className="text-[10px] font-black text-purple-400 uppercase tracking-widest">Mediador de Disputas IA</p>
+                   </div>
+                   <div className="space-y-2">
+                      <p className="text-[11px] text-slate-300"><strong>Cambios:</strong> {scanResult.dispute_analysis.changes_detected}</p>
+                      <p className="text-[11px] text-slate-300"><strong>Veredicto:</strong> <span className="text-white italic">{scanResult.dispute_analysis.mediator_verdict}</span></p>
+                   </div>
                 </div>
               )}
 
