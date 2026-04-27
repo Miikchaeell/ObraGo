@@ -900,9 +900,13 @@ app.post('/api/analyze', authenticateToken, upload.array('images', 10), async (r
             environmental_impact: {
               co2_kg: 450,
               waste_m3: 0.8,
-              waste_plan: { "hormigon": 0.5, "madera": 0.2, "metal": 0.1 },
-              cutting_optimization: "Utilizar despuntes de fierro de 12mm para trabas de muros.",
-              water_efficiency_liters: 120,
+              green_tech_expansion: {
+                solar_kwh_month: 240,
+                bio_alternative: "Celulosa Proyectada en tabiquería",
+                thermal_savings_percent: 35,
+                logistics_total_weight_kg: 2400,
+                recommended_truck: "Camión Simple (3/4)"
+              },
               green_score: 4
             },
             calidad_analisis: { iluminacion: "buena", enfoque: "nitido", advertencia: "MODO MOCK" },
@@ -933,20 +937,22 @@ app.post('/api/analyze', authenticateToken, upload.array('images', 10), async (r
         };
       });
 
-      const systemPrompt = `Eres un Ingeniero Civil de Terreno experto en Obra Go, analista de planos, Prevencionista de Riesgos y Especialista en Construcción Sustentable. 
+      const systemPrompt = `Eres un Ingeniero Civil de Terreno experto en Obra Go, analista de planos, Prevencionista de Riesgos y Especialista en Green Tech. 
       Analiza estas fotografías o planos de obra e identifica partidas como: Radieres, Cierros, Excavaciones, Muros o Estructuras de Techumbre.
       
       ESTRATEGIA DE ANÁLISIS:
       1. Si es un plano 2D, extrae las áreas, ejes y perímetros para estimar las dimensiones (Largo, Ancho, Espesor).
       2. Si son fotos reales, fusiona el contexto de todas las fotos para encontrar la partida dominante.
       3. AUDITORÍA DE SEGURIDAD (PRP): Analiza si los trabajadores (si hay) usan casco, chaleco y zapatos de seguridad. Identifica riesgos.
-      4. ANÁLISIS AMBIENTAL (SUSTENTABLE): 
-         - Estima la huella de CO2 (kg) basada en el volumen de hormigón/acero.
-         - Estima el volumen de residuos (m3) y segrega por material.
-         - Proporciona un consejo de optimización de cortes para desperdicio cero.
-         - Estima el consumo de agua ideal para la mezcla.
+      4. ANÁLISIS AMBIENTAL AVANZADO (V16.0): 
+         - Estima la huella de CO2 (kg).
+         - Estima el volumen de residuos (m3).
+         - POTENCIAL SOLAR: Si es techo/losa, estima m2 útiles y kWh/mes potenciales.
+         - ALTERNATIVA BIO: Recomienda un material bio-basado (celulosa, cáñamo, CLT) para la partida.
+         - AHORRO TÉRMICO: Estima el % de ahorro en energía si se usa aislación premium vs estándar.
+         - LOGÍSTICA: Estima el peso total (kg) y el tipo de camión ideal (3/4, Tolva, Simple) para evitar viajes vacíos.
       5. No devuelvas valores genéricos si puedes aproximar la realidad.
-      6. Devuelve un JSON estricto con dimensiones, seguridad e impacto ambiental.
+      6. Devuelve un JSON estricto con dimensiones, seguridad e impacto ambiental avanzado.
 
       IDS PERMITIDOS: [radier_estandar, tabique_st, cielo_falso_st, cie_prov_osb, techumbre_zinc, albañileria_ladrillo].
       
@@ -960,9 +966,13 @@ app.post('/api/analyze', authenticateToken, upload.array('images', 10), async (r
         "environmental_impact": {
            "co2_kg": X,
            "waste_m3": Y,
-           "waste_plan": { "hormigon": X, "madera": Y, "metal": Z },
-           "cutting_optimization": "Consejo técnico...",
-           "water_efficiency_liters": W,
+           "green_tech_expansion": {
+              "solar_kwh_month": X,
+              "bio_alternative": "...",
+              "thermal_savings_percent": X,
+              "logistics_total_weight_kg": Y,
+              "recommended_truck": "..."
+           },
            "green_score": 1-5
         },
         "confianza": 0.XX,
@@ -1020,9 +1030,13 @@ app.post('/api/analyze', authenticateToken, upload.array('images', 10), async (r
         environmental_impact: {
           co2_kg: 0,
           waste_m3: 0,
-          waste_plan: { "hormigon": 0, "madera": 0, "metal": 0 },
-          cutting_optimization: "Sin datos para optimizar.",
-          water_efficiency_liters: 0,
+          green_tech_expansion: {
+            solar_kwh_month: 0,
+            bio_alternative: "No disponible",
+            thermal_savings_percent: 0,
+            logistics_total_weight_kg: 0,
+            recommended_truck: "No determinado"
+          },
           green_score: 3
         },
         confidence: 0.3,
