@@ -130,5 +130,20 @@ export const validateAECBounds = (systemId: string | null, dims: Dimensions): st
     }
   }
 
+  // Límite de ingeniería para tabiques (Altura estructural máxima 3m)
+  if (systemId.includes('tabique')) {
+    if (dims.alto && (dims.alto < 2.0 || dims.alto > 3.0)) {
+      warnings.push("Esa medida no cumple con estándares de seguridad, ¿estás seguro? (La altura máxima de tabique sin refuerzo es 3.0m)");
+    }
+  }
+
+  // Límite de ingeniería para techumbre (Luz máxima cercha estándar 8m)
+  if (systemId.includes('techumbre')) {
+    const luzMaxima = Math.min(dims.largo, dims.ancho);
+    if (luzMaxima > 8.0) {
+      warnings.push("Esa medida no cumple con estándares de seguridad, ¿estás seguro? (Luces mayores a 8m exigen reticulado especial o vigas maestras)");
+    }
+  }
+
   return warnings;
 };
