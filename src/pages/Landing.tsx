@@ -19,6 +19,30 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen bg-[#000000] text-white font-sans selection:bg-primary selection:text-black">
+      {/* Top Navigation Bar */}
+      <nav className="fixed top-0 left-0 right-0 z-[100] px-6 py-8 flex justify-between items-center bg-gradient-to-b from-black/80 to-transparent backdrop-blur-sm">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-black border border-primary/20 rounded-lg flex items-center justify-center">
+            <img src="/obrago-gold-logo.jpg" className="w-full h-full object-cover" alt="O" />
+          </div>
+          <span className="text-xs font-black tracking-[0.2em] uppercase">Obra Go</span>
+        </div>
+        <div className="flex items-center gap-6">
+          <button 
+            onClick={() => navigate('/login')}
+            className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-white transition-colors"
+          >
+            Acceso Clientes
+          </button>
+          <Button 
+            onClick={() => navigate('/scanner')}
+            className="h-10 px-6 rounded-full bg-primary/10 border border-primary/20 text-primary hover:bg-primary hover:text-black text-[10px] font-black uppercase tracking-widest transition-all"
+          >
+            Empezar
+          </Button>
+        </div>
+      </nav>
+
       {/* Hero Section */}
       <header className="relative h-screen flex flex-col items-center justify-center overflow-hidden border-b border-white/5">
         {/* Background Animation */}

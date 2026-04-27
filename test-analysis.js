@@ -1,7 +1,5 @@
 import jwt from 'jsonwebtoken';
-// import fetch from 'node-fetch'; // No longer needed in Node 18+
 import fs from 'fs';
-import FormData from 'form-data';
 
 const JWT_SECRET = 'obra-super-secret-key';
 const MOCK_USER = {
@@ -12,26 +10,26 @@ const MOCK_USER = {
 };
 
 const token = jwt.sign(MOCK_USER, JWT_SECRET, { expiresIn: '1h' });
-const API_URL = 'http://localhost:4000/api/analyze';
+const API_URL = 'http://localhost:8080/api/analyze';
 
 async function testAnalysis() {
   console.log("🚀 Iniciando prueba de diagnóstico /api/analyze...");
   
-  // Create a dummy image file
   const dummyFilePath = './test_dummy.jpg';
   fs.writeFileSync(dummyFilePath, 'fake-image-data-for-testing');
   
-  const form = new FormData();
-  form.append('image', fs.createReadStream(dummyFilePath));
-
   try {
+    const formData = new FormData();
+    const fileBuffer = fs.readFileSync(dummyFilePath);
+    const blob = new Blob([fileBuffer], { type: 'image/jpeg' });
+    formData.append('image', blob, 'test_dummy.jpg');
+
     const response = await fetch(API_URL, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${token}`,
-        ...form.getHeaders()
+        'Authorization': `Bearer ${token}`
       },
-      body: form
+      body: formData
     });
 
     const data = await response.json();

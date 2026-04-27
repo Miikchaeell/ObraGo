@@ -16,26 +16,27 @@ export const createPaymentPreference = async (userId, userEmail, projectName) =>
             body: {
                 items: [
                     {
-                        id: 'pdf-unlock',
-                        title: `Desbloqueo PDF: ${projectName}`,
+                        id: 'reporte-elite',
+                        title: 'Obra Go - Reporte Élite de Ingeniería',
                         quantity: 1,
-                        unit_price: Number(process.env.PRECIO || 2990),
+                        unit_price: 2990,
                         currency_id: 'CLP',
                     }
                 ],
                 payer: {
                     email: userEmail
                 },
+                statement_descriptor: "OBRA GO",
+                integrator_id: "dev_24c65dbd1ad711ea82820242ac130004", // ID de Integrador MP Chile
                 back_urls: {
-                    success: `${process.env.FRONTEND_URL || 'https://app.obrago.cl'}/dashboard?status=success`,
-                    failure: `${process.env.FRONTEND_URL || 'https://app.obrago.cl'}/scanner?status=failure`,
-                    pending: `${process.env.FRONTEND_URL || 'https://app.obrago.cl'}/dashboard?status=pending`
+                    success: `${process.env.VITE_FRONTEND_URL || 'http://localhost:5555'}/scanner?status=approved`,
+                    failure: `${process.env.VITE_FRONTEND_URL || 'http://localhost:5555'}/scanner?status=failure`,
+                    pending: `${process.env.VITE_FRONTEND_URL || 'http://localhost:5555'}/scanner?status=pending`
                 },
                 auto_return: 'approved',
-                notification_url: `${process.env.BACKEND_URL}/api/webhook/mp`,
                 metadata: {
                     user_id: userId,
-                    type: 'pdf_unlock'
+                    project_name: projectName
                 }
             }
         });

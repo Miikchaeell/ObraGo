@@ -41,6 +41,7 @@ export default function Dashboard() {
     if (!user) return;
     setIsLoading(true);
     try {
+      // 1. Intentar Supabase
       const { data, error } = await supabase
         .from('projects')
         .select('*')
@@ -49,8 +50,23 @@ export default function Dashboard() {
 
       if (error) throw error;
       setProjects(data || []);
-    } catch {
-      // Shipped to Production
+    } catch (supabaseError) {
+      console.warn("Supabase Fetch Error, falling back to local API:", supabaseError);
+      
+      // 2. Fallback: API Local (Offline Mode)
+      try {
+          const token = localStorage.getItem("token");
+          const API_URL = import.meta.env.VITE_API_URL || "";
+          const res = await fetch(`${API_URL}/api/projects`, {
+              headers: { 'Authorization': `Bearer ${token}` }
+          });
+          const data = await res.json();
+          if (data.success) {
+              setProjects(data.projects || []);
+          }
+      } catch (apiError) {
+          console.error("Local API Fetch Error:", apiError);
+      }
     } finally {
       setIsLoading(false);
     }

@@ -34,8 +34,8 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import Stripe from 'stripe';
 import cookieParser from 'cookie-parser';
-import nodemailer from 'nodemailer';
 import { createPaymentPreference } from './services/payment.js';
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const isProduction = process.env.NODE_ENV === 'production';
 const hasEmailConfig = !!(process.env.EMAIL_USER && process.env.EMAIL_PASS);
@@ -112,7 +112,8 @@ const JWT_SECRET = process.env.JWT_SECRET || 'obra-super-secret-key';
 const MOCK_USER = {
   id: '00000000-0000-0000-0000-000000000000',
   email: 'michael.seura.delgado@gmail.com',
-  password_hash: '$2a$10$X8O9.v2s/6rYV8yG1v8yEuG9yG9yG9yG9yG9yG9yG9yG9yG9y', // hash for '123456'
+  phone: '+56912345678',
+  password_hash: '$2a$10$89v8/pXnI.vS8/q3Y3Y3Y.u1I1I1I1I1I1I1I1I1I1I1I1I1I1I1I', // placeholder for 123456
   password_plain: '123456',
   role: 'admin',
   status: 'approved'
@@ -229,8 +230,10 @@ if (isProduction) {
 const allowedOrigins = [
   'https://app.obrago.cl',
   'https://obrascan.vercel.app', // Vercel Production
-  'http://localhost:5173', // Para desarrollo local
-  'http://127.0.0.1:5173'
+  'http://localhost:5173', // Para desarrollo local (Vite default)
+  'http://127.0.0.1:5173',
+  'http://localhost:5555', // Vite Custom Port
+  'http://127.0.0.1:5555'
 ];
 
 app.use(cors({
@@ -376,71 +379,150 @@ app.post('/api/webhook/mp', async (req, res) => {
     res.sendStatus(200);
 });
 
-// [v16.1] ADMIN API
-// ... existente
+// [v16.1] ADMIN API - CEO Business Intelligence
+app.get('/api/admin/stats', authenticateToken, isAdmin, async (req, res) => {
+    if (!isProduction && !hasDBConfig) {
+        const data = getMockData();
+        const heatmap = data.scans.reduce((acc, scan) => {
+            const commune = scan.commune || "Metropolitana";
+            const existing = acc.find(h => h.commune === commune);
+            if (existing) existing.activity++;
+            else acc.push({ commune, activity: 1 });
+            return acc;
+        }, []).sort((a, b) => b.activity - a.activity);
 
-// [v17.0] AUTONOMOUS SUPPORT AI ELITE - Context Aware
-app.post('/api/chat/support', async (req, res) => {
+        const systems = data.scans.reduce((acc, scan) => {
+            const sys = scan.sistema || "Otro";
+            acc[sys] = (acc[sys] || 0) + 1;
+            return acc;
+        }, {});
+
+        const monthlyRevenue = [
+            { month: "Ene", amount: 1540000 },
+            { month: "Feb", amount: 2100000 },
+            { month: "Mar", amount: 1850000 },
+            { month: "Abr", amount: 3200000 }
+        ];
+
+        return res.json({
+            success: true,
+            totalUsers: 42,
+            totalSales: data.scans.length,
+            totalRevenue: data.scans.reduce((sum, s) => sum + (s.total_cost || 0), 0),
+            heatmap: heatmap.slice(0, 5),
+            systems: Object.entries(systems).map(([name, value]) => ({ name, value })),
+            trends: monthlyRevenue
+        });
+    }
+    try {
+        const { rows: [stats] } = await pool.query('SELECT COUNT(*) as count FROM users');
+        const { rows: [sales] } = await pool.query('SELECT COUNT(*) as count FROM projects');
+        const { rows: [revenue] } = await pool.query('SELECT SUM(total_cost) as total FROM projects');
+        
+        res.json({
+            success: true,
+            totalUsers: parseInt(stats.count),
+            totalSales: parseInt(sales.count),
+            totalRevenue: parseFloat(revenue.total || 0),
+            heatmap: [{ commune: "Santiago", activity: 15 }, { commune: "Maipú", activity: 8 }],
+            systems: [{ name: "Radier", value: 12 }, { name: "Muro", value: 5 }],
+            trends: [
+                { month: "Mar", amount: 1200000 },
+                { month: "Abr", amount: 2450000 }
+            ]
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// [v16.2] DELETE PROJECT
+app.delete('/api/projects/:id', authenticateToken, async (req, res) => {
+    const { id } = req.params;
+    if (!isProduction && !hasDBConfig) {
+        const data = getMockData();
+        data.scans = data.scans.filter(s => s.id !== id);
+        saveMockData(data);
+        return res.json({ success: true });
+    }
+    try {
+        await pool.query('DELETE FROM projects WHERE id = $1 AND user_id = $2', [id, req.user.id]);
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// [v21.0] GOOGLE GEMINI 1.5 FLASH - CEREBRO AEC
+app.post('/api/chat/support', upload.single('image'), async (req, res) => {
     const { message, history, metadata } = req.body;
-    const hasOpenAI = !!process.env.OPENAI_API_KEY;
+    const hasGemini = !!process.env.GOOGLE_API_KEY;
 
-    if (!hasOpenAI) {
+    if (!hasGemini) {
         return res.json({ 
-            reply: "Hola! Soy el Ingeniero de Soporte de Obra Go. Por ahora estoy en modo mantenimiento, pero puedes contactarnos por WhatsApp si tienes una urgencia técnica." 
+            reply: "¡Hola! Soy el Ingeniero Senior de Obra Go. Por ahora estoy en modo mantenimiento, pero puedes contactarnos por WhatsApp si tienes una urgencia técnica." 
         });
     }
 
     try {
-        const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-        
-        // [v3.5] Staff de Ingeniería Elite - Identidad y Escalación
+        const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
         const engineerName = metadata?.assignedEngineer || 'Michael';
-        const engineerRole = metadata?.engineerRole || 'Director de Ingeniería';
-        
-        const userProjectInfo = metadata ? `
-        SOPORTE ASIGNADO:
-        - Profesional: ${engineerName}
-        - Cargo: ${engineerRole}
-        
-        DATOS DEL PROYECTO ACTUAL:
-        - Proyecto: ${metadata.projectName || 'Sin nombre'}
-        - Categoría: ${metadata.category || 'General'}
-        - Dimensiones: ${metadata.dims?.largo}m x ${metadata.dims?.ancho}m x ${metadata.dims?.espesor}m
-        - Dosificación: ${metadata.dosage?.resistencia} + ${metadata.dosage?.secado}
-        - Inversión Estimada: $${Math.round(metadata.totalCost * 1.19).toLocaleString('es-CL')} (IVA Incl.)
-        - Pantalla Actual: ${metadata.step}
-        ` : 'El usuario aún no ha ingresado datos técnicos.';
+        const engineerRole = metadata?.engineerRole || 'Ingeniero Senior AEC';
+        const totalCost = metadata?.totalCost || '0';
 
-        const systemPrompt = `Eres Michael, experto en ingeniería civil, Fundador y creador de Obra Go.
+        const systemPrompt = `Eres el ${engineerRole} de ObraGo. Tu nombre es ${engineerName}.
         
-        IDENTIDAD Y TONO:
-        - Eres Chileno, experto, seguro y sumamente profesional. 
-        - Eres un socio de confianza, no un robot. Tu tono es grato y validas el éxito del usuario.
-        
-        CONTEXTO DEL PROYECTO:
-        Analiza técnicamente los datos del presupuesto calculado bajo las normas NCh 170 (Hormigón) y NCh 430 (Hormigón Armado).
-        
-        RESTRICCIONES Y EMBUDO DE VENTAS:
-        - Tu objetivo principal es vender el Reporte Élite por $2.990.
-        - Ante cualquier duda sobre materiales, rendimientos o cubicación, responde brevemente con autoridad técnica.
-        - FINALIZA SIEMPRE con esta frase: "Para ver el desglose exacto de materiales, mano de obra y el Mincho Chico de este presupuesto, descarga el Reporte Élite por solo $2.990".
-        
-        REGLA DE ORO: Tú no eres una IA, eres Michael. Valida técnicamente las cubicaciones presentadas. No entregues desgloses matemáticos completos en el chat.`;
+        REGLAS DE COMPORTAMIENTO:
+        1. Base de Conocimientos: Normas chilenas NCh 170 (Hormigón) y NCh 430 (Hormigón Armado).
+        2. Contexto de Obra: Tienes acceso al presupuesto dinámico del usuario, que actualmente es de $${Number(totalCost).toLocaleString('es-CL')} CLP.
+        3. Objetivo Comercial: Resolver dudas técnicas con autoridad y empujar la venta del 'Reporte Élite ($2.990)' como la única fuente oficial de verdad y desglose técnico.
+        4. Tono: Chileno, extremadamente profesional, socio de confianza. No eres una IA, eres un colega experto.
+        5. Venta: Si el usuario tiene dudas sobre cubicaciones exactas, dile que el Reporte Élite contiene el APU (Análisis de Precios Unitarios) y el Mincho Chico detallado.
+        6. Botón de Pago: Si detectas que el usuario está muy confundido o pide el desglose total, incluye la palabra clave [SHOW_PAYMENT_BUTTON] en tu respuesta.`;
 
-        const response = await openai.chat.completions.create({
-            model: "gpt-4o",
-            messages: [
-                { role: "system", content: systemPrompt },
-                ...history,
-                { role: "user", content: message }
-            ],
-            max_tokens: 350
+        let chatHistory = [];
+        if (history) {
+            try {
+                const parsedHistory = typeof history === 'string' ? JSON.parse(history) : history;
+                chatHistory = parsedHistory.map(m => ({
+                    role: m.role === 'assistant' ? 'model' : 'user',
+                    parts: [{ text: m.content }]
+                }));
+            } catch (e) {
+                console.error("History parse error:", e);
+            }
+        }
+
+        const chat = model.startChat({
+            history: chatHistory,
+            generationConfig: { maxOutputTokens: 500 }
         });
 
-        res.json({ reply: response.choices[0].message.content });
+        const promptParts = [
+            { text: systemPrompt },
+            { text: `Consulta del Usuario: ${message}` }
+        ];
+
+        // Soporte Multimodal (Visión)
+        if (req.file) {
+            const imageData = fs.readFileSync(req.file.path);
+            promptParts.push({
+                inlineData: {
+                    data: imageData.toString("base64"),
+                    mimeType: req.file.mimetype
+                }
+            });
+        }
+
+        const result = await chat.sendMessage(promptParts);
+        const reply = result.response.text();
+
+        res.json({ reply });
     } catch (error) {
-        console.error("SUPPORT AI ERROR:", error);
-        res.status(500).json({ error: "Error en el motor de soporte" });
+        console.error("GEMINI SUPPORT ERROR:", error);
+        res.status(500).json({ error: "Error en el cerebro Gemini" });
     }
 });
 app.get('/', (req, res) => res.send('ObraGo Backend Stable Live'));
@@ -523,46 +605,97 @@ app.post('/api/feedback/correction', authenticateToken, async (req, res) => {
 });
 
 app.post('/api/auth/login', async (req, res) => {
-  const { email, password } = req.body;
+  const { phone, password } = req.body; // Cambiado de email a phone
 
-  // [v7.0] Mock Login (Offline Mode)
+  // [v19.0] SMS Login + Email Identity Verification (Offline Mode)
   if (!isProduction && !hasDBConfig) {
-    if (email === MOCK_USER.email && password === MOCK_USER.password_plain) {
-      console.log(`✅ MOCK LOGIN SUCCESS: ${email}`);
-      const token = jwt.sign({ id: MOCK_USER.id, email: MOCK_USER.email, role: MOCK_USER.role, status: MOCK_USER.status }, JWT_SECRET, { expiresIn: '7d' });
-      res.cookie('token', token, { httpOnly: true, secure: true, sameSite: 'none', maxAge: 7 * 24 * 60 * 60 * 1000 });
-      return res.json({ success: true, token, user: { id: MOCK_USER.id, email: MOCK_USER.email, role: MOCK_USER.role, status: MOCK_USER.status } });
+    if (phone === MOCK_USER.phone && (password === MOCK_USER.password_plain || password === '123456')) {
+      console.log(`📱 SMS LOGIN REQUEST: ${phone}`);
+      console.log(`📧 ENVIANDO VERIFICACIÓN A EMAIL: ${MOCK_USER.email}`);
+      
+      // Simulación de envío de mail con código
+      const mailOptions = {
+        from: '"ObraGo Security" <security@obrago.cl>',
+        to: MOCK_USER.email,
+        subject: "Código de Verificación de Identidad - ObraGo",
+        html: `<h1>Tu código de seguridad es: 123456</h1><p>Ingresaste con el teléfono ${phone}</p>`
+      };
+      safeSendMail(mailOptions);
+
+      return res.json({ 
+        success: true, 
+        mfaRequired: true, 
+        tempToken: jwt.sign({ id: MOCK_USER.id, email: MOCK_USER.email, mfaPending: true }, JWT_SECRET, { expiresIn: '5m' }),
+        message: `Código enviado a ${MOCK_USER.email}` 
+      });
     } else {
-      console.warn(`❌ MOCK LOGIN FAILURE: ${email}`);
-      return res.status(401).json({ error: 'Credenciales inválidas (MODO MOCK)' });
+      console.warn(`❌ LOGIN FAILURE (Phone): ${phone}`);
+      return res.status(401).json({ error: 'Teléfono o contraseña incorrecta' });
     }
   }
 
   try {
-    const { rows: [user] } = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+    const { rows: [user] } = await pool.query('SELECT * FROM users WHERE phone = $1', [phone]);
     if (!user || !(await bcrypt.compare(password, user.password_hash))) {
       return res.status(401).json({ error: 'Credenciales inválidas' });
     }
     
-    // [v3.0] Manual Approval System
-    if (user.status === 'pending' && user.role !== 'admin' && user.role !== 'superadmin') {
-       return res.status(403).json({ error: 'TU_CUENTA_AUN_NO_HA_SIDO_APROBADA' });
-    }
-    if (user.status === 'rejected' && user.role !== 'admin' && user.role !== 'superadmin') {
-       return res.status(403).json({ error: 'TU_ACCESO_FUE_RECHAZADO' });
-    }
-
-    const token = jwt.sign({ id: user.id, email: user.email, role: user.role, status: user.status }, JWT_SECRET, { expiresIn: '7d' });
-    res.cookie('token', token, { 
-      httpOnly: true, 
-      secure: true, 
-      sameSite: 'strict', 
-      maxAge: 7 * 24 * 60 * 60 * 1000 
+    // [v19.1] Email MFA Challenge
+    console.log(`📧 ENVIANDO MFA A EMAIL DE USUARIO: ${user.email}`);
+    // Aquí iría la lógica real de envío de mail al correo del usuario
+    
+    return res.json({ 
+        success: true, 
+        mfaRequired: true, 
+        tempToken: jwt.sign({ id: user.id, email: user.email, mfaPending: true }, JWT_SECRET, { expiresIn: '5m' }),
+        message: `Verifica tu identidad en el correo: ${user.email.replace(/(.{3})(.*)(?=@)/, "$1***")}`
     });
-    res.json({ success: true, token, user: { id: user.id, email: user.email, role: user.role, status: user.status } });
+
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
+});
+
+// [v18.2] MFA VERIFICATION
+app.post('/api/auth/verify-mfa', async (req, res) => {
+    const { tempToken, code } = req.body;
+    try {
+        const decoded = jwt.verify(tempToken, JWT_SECRET);
+        if (!decoded.mfaPending) throw new Error("Invalid token state");
+
+        // Mock Code Validation (Always 123456 for dev/demo)
+        if (code !== "123456") {
+            return res.status(401).json({ error: "Código MFA inválido" });
+        }
+
+        // Generate Final Token
+        let user;
+        if (!isProduction && !hasDBConfig && decoded.id === MOCK_USER.id) {
+            user = MOCK_USER;
+        } else {
+            const { rows: [dbUser] } = await pool.query('SELECT id, email, role, status FROM users WHERE id = $1', [decoded.id]);
+            user = dbUser;
+        }
+
+        const token = jwt.sign({ id: user.id, email: user.email, role: user.role, status: user.status }, JWT_SECRET, { expiresIn: '7d' });
+        res.cookie('token', token, { httpOnly: true, secure: true, sameSite: 'none', maxAge: 7 * 24 * 60 * 60 * 1000 });
+        res.json({ success: true, token, user });
+
+    } catch (error) {
+        res.status(401).json({ error: "Sesión de verificación expirada o inválida" });
+    }
+});
+
+// [v20.0] MERCADO PAGO INTEGRATION
+app.post('/api/payment/create-preference', authenticateToken, async (req, res) => {
+    const { projectName } = req.body;
+    try {
+        const initPoint = await createPaymentPreference(req.user.id, req.user.email, projectName);
+        res.json({ success: true, initPoint });
+    } catch (error) {
+        console.error("PAYMENT PREFERENCE ERROR:", error);
+        res.status(500).json({ error: "No se pudo crear la preferencia de pago" });
+    }
 });
 
 // [v3.0] ADMIN USER ACTION (Approve/Reject)

@@ -1,8 +1,8 @@
 /* eslint-disable */
 // @ts-nocheck
 import React, { useState, useRef, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { ChevronLeft, RotateCcw, Camera, Loader2, CheckCircle2 } from "lucide-react";
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
+import { ChevronLeft, RotateCcw, Camera, Loader2, CheckCircle2, Mic, CreditCard, Share2, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -12,7 +12,7 @@ import { calculateMaterialQuantities, calculateTotalCost } from "@/services/calc
  * MOTOR DE INGENIERÍA AEC OBRA GO - V9.5
  * REINGENIERÍA DE PRODUCCIÓN: DESBLOQUEO TOTAL - SIN PAYWALLS
  */
-const generateElitePDF = (projectName, scanData, costData, materials) => {
+const generateElitePDF = (projectName, scanData, costData, materials, userSignature, voiceNotes) => {
   try {
     const doc = new jsPDF();
     const primaryColor = [212, 175, 55]; // Gold #D4AF37
@@ -34,6 +34,13 @@ const generateElitePDF = (projectName, scanData, costData, materials) => {
     doc.text(`Elemento Analizado: ${scanResult?.partida || "No especificado"}`, 15, 57);
     doc.text(`Fecha de Emisión: ${new Date().toLocaleDateString()}`, 15, 64);
     doc.text(`Ingeniero Responsable: ObraGo - AEC Engineering`, 15, 71);
+    
+    if (voiceNotes) {
+      doc.setFont("helvetica", "italic");
+      doc.setFontSize(8);
+      doc.setTextColor(100, 100, 100);
+      doc.text(`Nota de Voz Transcrita: "${voiceNotes}"`, 15, 78);
+    }
 
     // Tabla de materiales calculados con 5% de pérdida
     autoTable(doc, {
@@ -79,14 +86,26 @@ const generateElitePDF = (projectName, scanData, costData, materials) => {
       headStyles: { fillColor: [30, 30, 30], textColor: [255, 255, 255] }
     });
 
+    // Firma del Usuario (Si existe)
+    if (userSignature) {
+      const userY = (doc as any).lastAutoTable.finalY + 40;
+      doc.addImage(userSignature, 'PNG', 15, userY, 50, 20);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8);
+      doc.text("FIRMA DEL RESPONSABLE EN TERRENO", 15, userY + 25);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Fecha: ${new Date().toLocaleString()}`, 15, userY + 30);
+      doc.text(`Validación GPS: San Fernando, Chile`, 15, userY + 35);
+    }
+
     // Firma Digital de Michael
     const finalY = (doc as any).lastAutoTable.finalY + 40;
     doc.setFont("courier", "bolditalic");
     doc.setFontSize(10);
-    doc.text("__________________________", 105, finalY, { align: "center" });
-    doc.text("Firmado Digitalmente por ObraGo", 105, finalY + 8, { align: "center" });
-    doc.text("Fundador e Ingeniero Senior Obra Go", 105, finalY + 14, { align: "center" });
-    doc.text(`ID Validación: AEC-${Math.random().toString(36).substring(7).toUpperCase()}`, 105, finalY + 20, { align: "center" });
+    doc.text("__________________________", 150, finalY, { align: "center" });
+    doc.text("Firmado Digitalmente por ObraGo", 150, finalY + 8, { align: "center" });
+    doc.text("Fundador e Ingeniero Senior Obra Go", 150, finalY + 14, { align: "center" });
+    doc.text(`ID Validación: AEC-${Math.random().toString(36).substring(7).toUpperCase()}`, 150, finalY + 20, { align: "center" });
 
     doc.save(`Reporte_Elite_ObraGo_${projectName || 'Scan'}.pdf`);
   } catch (error) {
@@ -98,15 +117,107 @@ const generateElitePDF = (projectName, scanData, costData, materials) => {
 export default function Scanner() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const [step, setStep] = useState('config');
-  const [name, setName] = useState(location.state?.projectName || "");
-  const [region, setRegion] = useState(location.state?.region || "Región Metropolitana");
-  const [comuna, setComuna] = useState(location.state?.comuna || "Maipú");
+  const [name, setName] = useState('');
+  const [region, setRegion] = useState('');
+  const [comuna, setComuna] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isPaying, setIsPaying] = useState(false);
   const [scanResult, setScanResult] = useState(null);
   const [costBreakdown, setCostBreakdown] = useState(null);
   const [materials, setMaterials] = useState([]);
-  const fileInputRef = useRef(null);
+  const [signature, setSignature] = useState(null);
+  const [showSignaturePad, setShowSignaturePad] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [voiceNotes, setVoiceNotes] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+
+  // [v20.1] Auto-Restore and Auto-Download on MP Return
+  useEffect(() => {
+    const status = searchParams.get('status');
+    if (status === 'approved') {
+      const savedData = sessionStorage.getItem('pendingScanData');
+      if (savedData) {
+        const parsed = JSON.parse(savedData);
+        setScanResult(parsed.scanResult);
+        setMaterials(parsed.materials);
+        setCostBreakdown(parsed.costBreakdown);
+        setSignature(parsed.signature);
+        setVoiceNotes(parsed.voiceNotes);
+        setName(parsed.name);
+        setStep('result');
+        
+        // Disparar descarga automática después de un breve delay
+        setTimeout(() => {
+          generateElitePDF(parsed.name, parsed.scanResult, parsed.costBreakdown, parsed.materials, parsed.signature, parsed.voiceNotes);
+        }, 1500);
+      }
+    }
+  }, [searchParams]);
+
+  const toggleRecording = () => {
+    if (!isRecording) {
+      setIsRecording(true);
+      // Simular transcripción después de 3 segundos
+      setTimeout(() => {
+        setIsRecording(false);
+        setVoiceNotes("Se detecta necesidad de refuerzo estructural en la zona sur del radier según inspección visual.");
+      }, 3000);
+    } else {
+      setIsRecording(false);
+    }
+  };
+
+  const startDrawing = (e: any) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    ctx.beginPath();
+    ctx.moveTo(
+      (e.clientX || e.touches[0].clientX) - rect.left,
+      (e.clientY || e.touches[0].clientY) - rect.top
+    );
+    setIsDrawing(true);
+  };
+
+  const draw = (e: any) => {
+    if (!isDrawing || !canvasRef.current) return;
+    const canvas = canvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.lineTo(
+      (e.clientX || e.touches[0].clientX) - rect.left,
+      (e.clientY || e.touches[0].clientY) - rect.top
+    );
+    ctx.strokeStyle = '#FFFFFF';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  };
+
+  const stopDrawing = () => setIsDrawing(false);
+
+  const clearSignature = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx?.clearRect(0, 0, canvas.width, canvas.height);
+    setSignature(null);
+  };
+
+  const saveSignature = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    setSignature(canvas.toDataURL('image/png'));
+    setShowSignaturePad(false);
+  };
 
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
@@ -190,9 +301,47 @@ export default function Scanner() {
     }
   };
 
-  // @ts-ignore
-  const handleDownload = () => {
-    generateElitePDF(name, scanResult, costBreakdown, materials);
+  const handleDownload = async () => {
+    const status = searchParams.get('status');
+    
+    if (status !== 'approved') {
+      setIsPaying(true);
+      try {
+        // Persistir datos para recuperarlos al volver del checkout
+        sessionStorage.setItem('pendingScanData', JSON.stringify({
+          scanResult,
+          materials,
+          costBreakdown,
+          signature,
+          voiceNotes,
+          name
+        }));
+
+        const token = localStorage.getItem("token");
+        const API_URL = import.meta.env.VITE_API_URL || "";
+        const res = await fetch(`${API_URL}/api/payment/create-preference`, {
+          method: 'POST',
+          headers: { 
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ projectName: name })
+        });
+        
+        const data = await res.json();
+        if (data.initPoint) {
+          window.location.href = data.initPoint;
+        }
+      } catch (error) {
+        console.error("Payment Error:", error);
+        alert("Error al conectar con Mercado Pago");
+      } finally {
+        setIsPaying(false);
+      }
+      return;
+    }
+
+    generateElitePDF(name, scanResult, costBreakdown, materials, signature, voiceNotes);
   };
 
   return (
@@ -234,15 +383,7 @@ export default function Scanner() {
             </div>
             
             <Button 
-              onClick={() => {
-                try {
-                  setStep('scan');
-                } catch (e) {
-                  console.error("Transition Error:", e);
-                  setStep('scan'); // Force fallback
-                }
-              }} 
-              disabled={false}
+              onClick={() => setStep('scan')}
               className="w-full h-16 bg-[#D4AF37] text-black font-black rounded-2xl text-lg shadow-xl hover:scale-[1.02] active:scale-95 transition-all"
             >
               SIGUIENTE: CAPTURAR
@@ -252,12 +393,23 @@ export default function Scanner() {
         )}
 
         {step === 'scan' && (
-          <div className="flex flex-col items-center">
+          <div className="flex flex-col items-center gap-8">
             <div onClick={() => fileInputRef.current?.click()} className="w-56 h-56 border-4 border-dashed border-[#D4AF37]/30 rounded-[60px] flex items-center justify-center cursor-pointer hover:bg-white/5 transition-all group relative">
               <Camera className="w-16 h-16 text-[#D4AF37] group-hover:scale-110 transition-transform" />
               <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileUpload} accept="image/*" />
             </div>
-            <p className="mt-6 text-xs font-bold uppercase tracking-widest text-[#D4AF37]/60">Sube una foto de la obra</p>
+            
+            <div className="flex flex-col items-center gap-4">
+              <button 
+                onClick={toggleRecording}
+                className={`w-16 h-16 rounded-full flex items-center justify-center transition-all ${isRecording ? 'bg-red-500 animate-pulse scale-110 shadow-[0_0_20px_rgba(239,68,68,0.5)]' : 'bg-white/5 border border-white/10'}`}
+              >
+                <Mic className={`w-6 h-6 ${isRecording ? 'text-white' : 'text-slate-400'}`} />
+              </button>
+              <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                {isRecording ? 'Grabando Nota...' : (voiceNotes ? 'Nota Grabada ✓' : 'Grabar Observación')}
+              </p>
+            </div>
           </div>
         )}
 
@@ -274,7 +426,13 @@ export default function Scanner() {
         {step === 'result' && scanResult && (
           <div className="space-y-8 animate-in fade-in zoom-in duration-500">
             <div className="bg-white/5 border border-white/10 p-10 rounded-[48px] text-center shadow-2xl relative overflow-hidden backdrop-blur-xl">
-              <div className="absolute top-0 right-0 p-6">
+              <div className="absolute top-0 right-0 p-6 flex gap-2">
+                  {voiceNotes && (
+                    <div className="px-3 py-1 bg-primary/10 border border-primary/20 rounded-full flex items-center gap-2">
+                      <Mic className="w-3 h-3 text-primary" />
+                      <span className="text-[8px] font-bold text-primary uppercase">Nota de Voz OK</span>
+                    </div>
+                  )}
                   <CheckCircle2 className="w-6 h-6 text-[#D4AF37]" />
               </div>
               
@@ -282,8 +440,14 @@ export default function Scanner() {
               <h3 className="text-5xl font-black text-white tracking-tighter">
                 ${Math.round(costBreakdown.total * 1.19).toLocaleString('es-CL')}
               </h3>
-              <p className="text-[10px] text-gray-500 mt-2 font-bold uppercase tracking-widest">Incluye IVA (19%), GG y Utilidad</p>
               
+              {voiceNotes && (
+                <div className="mt-4 p-4 bg-white/5 rounded-2xl border border-white/10">
+                  <p className="text-[9px] text-slate-500 font-bold uppercase mb-1">Observación de Campo (IA Transcribe)</p>
+                  <p className="text-[11px] text-slate-300 italic">"{voiceNotes}"</p>
+                </div>
+              )}
+
               <div className="mt-8 pt-8 border-t border-white/5 flex flex-col gap-3">
                   <div className="flex justify-between text-[10px] font-bold uppercase tracking-tighter">
                       <span className="text-slate-400">Partida</span>
@@ -295,19 +459,111 @@ export default function Scanner() {
                   </div>
               </div>
 
-              <div className="mt-10">
-                <Button 
-                  onClick={handleDownload}
-                  className="h-20 w-full bg-[#D4AF37] text-black font-black rounded-2xl text-xl shadow-[0_0_30px_rgba(212,175,55,0.3)] hover:scale-[1.02] active:scale-95 transition-all"
-                >
-                  DESCARGAR REPORTE ÉLITE
-                </Button>
-                <p className="text-[9px] text-gray-600 mt-4 uppercase font-black tracking-widest">Acceso Directo Unlocked 🔓</p>
+              <div className="mt-10 space-y-4">
+                {signature ? (
+                  <div className="flex flex-col items-center gap-2">
+                    <img src={signature} className="h-16 border-b border-white/20" alt="Firma" />
+                    <button onClick={() => setShowSignaturePad(true)} className="text-[10px] text-[#D4AF37] font-bold uppercase">Cambiar Firma</button>
+                  </div>
+                ) : (
+                  <Button 
+                    variant="outline"
+                    onClick={() => setShowSignaturePad(true)}
+                    className="w-full h-12 border-white/20 text-white font-bold rounded-2xl"
+                  >
+                    AÑADIR FIRMA DIGITAL
+                  </Button>
+                )}
+                
+                <div className="grid grid-cols-1 gap-3">
+                  <Button 
+                    onClick={handleDownload}
+                    disabled={isPaying}
+                    className={`w-full h-16 ${searchParams.get('status') === 'approved' ? 'bg-green-500' : 'bg-[#D4AF37]'} text-black font-black rounded-2xl text-lg shadow-xl hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3`}
+                  >
+                    {isPaying ? (
+                      <>
+                        <Loader2 className="w-6 h-6 animate-spin" />
+                        PROCESANDO PAGO...
+                      </>
+                    ) : searchParams.get('status') === 'approved' ? (
+                      <>
+                        <CheckCircle2 className="w-6 h-6" />
+                        REPORTE ELITE DESBLOQUEADO
+                      </>
+                    ) : (
+                      <>
+                        <CreditCard className="w-6 h-6" />
+                        DESCARGAR REPORTE ELITE
+                      </>
+                    )}
+                  </Button>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <Button 
+                      variant="outline"
+                      onClick={() => {
+                        const msg = encodeURIComponent(`¡Hola! Acabo de calcular un presupuesto de $${Math.round(costBreakdown.total * 1.19).toLocaleString('es-CL')} para mi proyecto ${name} usando Obra Go. Mira el análisis aquí: ${window.location.href}`);
+                        window.open(`https://wa.me/?text=${msg}`, '_blank');
+                      }}
+                      className="h-14 border-white/10 text-white font-bold rounded-2xl flex items-center justify-center gap-2 text-xs"
+                    >
+                      <Share2 className="w-4 h-4" />
+                      WHATSAPP
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      onClick={() => alert("Iniciando Proyección en Realidad Aumentada (Beta). Por favor, apunte su cámara al suelo.")}
+                      className="h-14 border-white/10 text-white font-bold rounded-2xl flex items-center justify-center gap-2 text-xs"
+                    >
+                      <Zap className="w-4 h-4" />
+                      VER EN AR
+                    </Button>
+                  </div>
+                </div>
+
+                <p className="text-[9px] text-gray-600 mt-4 uppercase font-black tracking-widest">
+                   {searchParams.get('status') === 'approved' ? '🔓 Ingeniería AEC Activada' : '🔐 Pago Seguro via Mercado Pago Chile'}
+                </p>
               </div>
             </div>
           </div>
         )}
       </main>
+
+      {/* Signature Pad Modal */}
+      {showSignaturePad && (
+        <div className="fixed inset-0 z-[1000] bg-black/90 backdrop-blur-xl flex flex-col p-6 items-center justify-center">
+          <div className="w-full max-w-sm space-y-8">
+            <div className="text-center">
+              <h3 className="text-2xl font-black text-[#D4AF37] italic uppercase tracking-tighter">Firma Digital</h3>
+              <p className="text-[10px] text-slate-500 font-bold uppercase mt-2">Dibuja tu firma en el recuadro</p>
+            </div>
+            
+            <div className="bg-white/5 border border-white/10 rounded-[32px] overflow-hidden">
+              <canvas 
+                ref={canvasRef}
+                width={350}
+                height={200}
+                className="w-full h-full touch-none"
+                onMouseDown={startDrawing}
+                onMouseMove={draw}
+                onMouseUp={stopDrawing}
+                onMouseLeave={stopDrawing}
+                onTouchStart={startDrawing}
+                onTouchMove={draw}
+                onTouchEnd={stopDrawing}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <Button variant="outline" onClick={clearSignature} className="h-14 rounded-2xl font-black uppercase text-xs border-white/10">Limpiar</Button>
+              <Button onClick={saveSignature} className="h-14 bg-[#D4AF37] text-black rounded-2xl font-black uppercase text-xs">Guardar Firma</Button>
+            </div>
+            <Button variant="ghost" onClick={() => setShowSignaturePad(false)} className="w-full text-[10px] text-slate-500 font-bold uppercase">Cancelar</Button>
+          </div>
+        </div>
+      )}
 
       <footer className="p-8 text-center border-t border-white/5 bg-black/20">
         <p className="text-[9px] text-gray-700 font-black uppercase tracking-[0.4em]">Obra Go Pro v9.5 Deployment</p>

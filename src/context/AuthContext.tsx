@@ -12,7 +12,8 @@ interface AuthContextType {
   isLoading: boolean;
   logout: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
-  login: (email: string, password: string) => Promise<void>;
+  login: (phone: string, password: string) => Promise<{ mfaRequired?: boolean; tempToken?: string }>;
+  verifyMfa: (tempToken: string, code: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -105,17 +106,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (error) throw error;
   };
 
-  const login = async (email: string, password: string) => {
+  const login = async (phone: string, password: string) => {
       const API_URL = import.meta.env.VITE_API_URL || "";
       const response = await fetch(`${API_URL}/api/auth/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password })
+          body: JSON.stringify({ phone, password })
       });
 
       if (!response.ok) {
           const err = await response.json();
           throw new Error(err.error || "Error de autenticación");
+      }
+
+      const data = await response.json();
+      
+      if (data.mfaRequired) {
+          return { mfaRequired: true, tempToken: data.tempToken };
+      }
+
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("user", JSON.stringify(data.user));
+      setUser(data.user);
+      setPlan('pro');
+      return { mfaRequired: false };
+  };
+
+  const verifyMfa = async (tempToken: string, code: string) => {
+      const API_URL = import.meta.env.VITE_API_URL || "";
+      const response = await fetch(`${API_URL}/api/auth/verify-mfa`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tempToken, code })
+      });
+
+      if (!response.ok) {
+          const err = await response.json();
+          throw new Error(err.error || "Código MFA inválido");
       }
 
       const data = await response.json();
@@ -134,7 +161,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, plan, isLoading, logout, signInWithGoogle, login }}>
+    <AuthContext.Provider value={{ user, plan, isLoading, logout, signInWithGoogle, login, verifyMfa }}>
       {children}
     </AuthContext.Provider>
   );

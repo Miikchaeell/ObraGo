@@ -1,15 +1,18 @@
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { LogIn, ShieldCheck, Mail, Lock } from "lucide-react";
+import { ShieldCheck, Lock, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 
 export default function Login() {
-  const { signInWithGoogle, login } = useAuth();
+  const { signInWithGoogle, login, verifyMfa } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
-  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [mfaStep, setMfaStep] = useState(false);
+  const [tempToken, setTempToken] = useState("");
+  const [mfaCode, setMfaCode] = useState("");
 
   const handleGoogleLogin = async () => {
     setIsLoading(true);
@@ -29,9 +32,26 @@ export default function Login() {
     setIsLoading(true);
     setError("");
     try {
-      await login(email, password);
+      const result = await login(phone, password);
+      if (result?.mfaRequired) {
+        setTempToken(result.tempToken || "");
+        setMfaStep(true);
+      }
     } catch (err: any) {
       setError(err.message || "Credenciales inválidas");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleMfaVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError("");
+    try {
+      await verifyMfa(tempToken, mfaCode);
+    } catch (err: any) {
+      setError(err.message || "Código inválido");
     } finally {
       setIsLoading(false);
     }
@@ -69,49 +89,90 @@ export default function Login() {
           
           <div className="relative z-10 space-y-8">
             <div className="text-center space-y-2">
-              <h2 className="text-3xl font-black tracking-tight text-white mb-2">Bienvenido</h2>
+              <h2 className="text-3xl font-black tracking-tight text-white mb-2">
+                {mfaStep ? "Verificar" : "Acceso"}
+              </h2>
               <div className="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 border border-primary/20 rounded-full">
                 <ShieldCheck className="w-3 h-3 text-primary" />
-                <span className="text-[9px] font-black text-primary uppercase tracking-widest">Protocolo Nivel 1</span>
+                <span className="text-[9px] font-black text-primary uppercase tracking-widest">
+                  {mfaStep ? "Identidad por Email" : "Login por SMS"}
+                </span>
               </div>
             </div>
 
-            <form onSubmit={handleEmailLogin} className="space-y-4">
-              <div className="space-y-2">
-                <div className="relative">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+            {!mfaStep ? (
+              <form onSubmit={handleEmailLogin} className="space-y-4">
+                <div className="space-y-2">
+                  <div className="relative">
+                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                    <input 
+                      type="tel" 
+                      placeholder="+56 9 1234 5678" 
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      required
+                      className="w-full h-14 bg-white/5 border border-white/10 rounded-2xl pl-12 pr-4 text-sm text-white focus:outline-none focus:border-primary/50 transition-all"
+                    />
+                  </div>
+                  <div className="relative">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                    <input 
+                      type="password" 
+                      placeholder="Contraseña" 
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      className="w-full h-14 bg-white/5 border border-white/10 rounded-2xl pl-12 pr-4 text-sm text-white focus:outline-none focus:border-primary/50 transition-all"
+                    />
+                  </div>
+                </div>
+
+                {error && <p className="text-red-500 text-[10px] font-bold uppercase text-center">{error}</p>}
+
+                <Button 
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full h-14 rounded-2xl bg-primary text-black font-black uppercase text-xs shadow-lg shadow-primary/20"
+                >
+                  {isLoading ? "Cargando..." : "Entrar con Email"}
+                </Button>
+              </form>
+            ) : (
+              <form onSubmit={handleMfaVerify} className="space-y-6">
+                <div className="space-y-2 text-center">
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Ingresa el código de 6 dígitos enviado a tu dispositivo</p>
                   <input 
-                    type="email" 
-                    placeholder="Email" 
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    type="text" 
+                    placeholder="000000" 
+                    maxLength={6}
+                    value={mfaCode}
+                    onChange={(e) => setMfaCode(e.target.value)}
                     required
-                    className="w-full h-14 bg-white/5 border border-white/10 rounded-2xl pl-12 pr-4 text-sm text-white focus:outline-none focus:border-primary/50 transition-all"
+                    className="w-full h-16 bg-white/5 border border-primary/30 rounded-2xl text-center text-2xl font-black tracking-[0.5em] text-primary focus:outline-none focus:border-primary transition-all"
                   />
                 </div>
-                <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                  <input 
-                    type="password" 
-                    placeholder="Contraseña" 
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    className="w-full h-14 bg-white/5 border border-white/10 rounded-2xl pl-12 pr-4 text-sm text-white focus:outline-none focus:border-primary/50 transition-all"
-                  />
+
+                {error && <p className="text-red-500 text-[10px] font-bold uppercase text-center">{error}</p>}
+
+                <div className="space-y-3">
+                  <Button 
+                    type="submit"
+                    disabled={isLoading}
+                    className="w-full h-14 rounded-2xl bg-primary text-black font-black uppercase text-xs shadow-lg shadow-primary/20"
+                  >
+                    {isLoading ? "Validando..." : "Verificar Acceso"}
+                  </Button>
+                  <Button 
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setMfaStep(false)}
+                    className="w-full text-[10px] text-slate-500 font-bold uppercase hover:text-white"
+                  >
+                    Volver al inicio
+                  </Button>
                 </div>
-              </div>
-
-              {error && <p className="text-red-500 text-[10px] font-bold uppercase text-center">{error}</p>}
-
-              <Button 
-                type="submit"
-                disabled={isLoading}
-                className="w-full h-14 rounded-2xl bg-primary text-black font-black uppercase text-xs shadow-lg shadow-primary/20"
-              >
-                {isLoading ? "Cargando..." : "Entrar con Email"}
-              </Button>
-            </form>
+              </form>
+            )}
 
             <div className="relative">
               <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/5"></div></div>
