@@ -12,6 +12,7 @@ import * as XLSX from 'xlsx';
 import imageCompression from 'browser-image-compression';
 import { generateSumaAlzadaContract } from "@/services/contractGenerator";
 import VoiceAssistant from "@/components/VoiceAssistant";
+import AROverlay from "@/components/AROverlay";
 
 /**
  * MOTOR DE INGENIERÍA AEC OBRA GO - V9.5
@@ -201,6 +202,7 @@ export default function Scanner() {
   const [isRecording, setIsRecording] = useState(false);
   const [voiceNotes, setVoiceNotes] = useState('');
   const [blockchainHash, setBlockchainHash] = useState('');
+  const [showAR, setShowAR] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -792,6 +794,15 @@ export default function Scanner() {
                     </div>
                   )}
 
+                  <Button 
+                    variant="outline"
+                    onClick={() => setShowAR(true)}
+                    className="w-full h-16 border-[#D4AF37]/30 text-[#D4AF37] font-black rounded-2xl flex items-center justify-center gap-3 hover:bg-[#D4AF37]/10"
+                  >
+                    <Box className="w-6 h-6" />
+                    PROYECTAR AR (AS-BUILT)
+                  </Button>
+
                   <div className="grid grid-cols-2 gap-3">
                     <Button 
                       variant="outline"
@@ -862,6 +873,13 @@ export default function Scanner() {
         <p className="text-[9px] text-gray-700 font-black uppercase tracking-[0.4em]">Obra Go Pro v9.5 Deployment</p>
       </footer>
       <VoiceAssistant context={scanResult} />
+      
+      {showAR && (
+        <AROverlay 
+          scanResult={scanResult}
+          onClose={() => setShowAR(false)} 
+        />
+      )}
     </div>
   );
 }
