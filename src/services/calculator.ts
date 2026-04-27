@@ -7,20 +7,6 @@ export interface Dimensions {
   alto: number;
 }
 
-export type ConcreteGrade = "G-17" | "G-20" | "G-25" | "G-30" | "G-35" | "G-40";
-
-export interface DosageSelection {
-  resistencia: ConcreteGrade; // Norma NCh 170
-  secado: "Estándar" | "R-7";
-  armaduraTipo: "ACMA" | "Tradicional";
-  armaduraDetalle: string;
-  aditivos?: string[]; 
-  vaciado?: "Directa" | "Bomba Pluma" | "Bomba Estacionaria";
-  mezclado?: "Planta (Mixer)" | "Obra (Trompo)";
-  acabado?: "Platachado" | "Helicóptero" | "Escobillado";
-  colocacion?: "GN" | "GB"; // Grado Normal / Grado Bombeable (Plastificante)
-}
-
 export interface MaterialLine {
   id: string;
   name: string;
@@ -38,6 +24,7 @@ export interface CostBreakdown {
   costoDirecto: number;
   gg: number;
   profit: number;
+  iva: number;
   total: number;
   volume: number;
 }
@@ -48,11 +35,11 @@ export const calculateGeometricData = (dims: Dimensions, systemId: string | null
   
   let area = largo * ancho;
   if (sys?.baseUnit === 'mt' || sys?.baseUnit === 'm') area = largo;
-  if (sys?.category === 'Estructuras' || sys?.category === 'Tabiquería' || sys?.name.toLowerCase().includes("muro")) {
-    area = largo * alto;
+  if (sys?.category === 'Terminaciones' || sys?.name.toLowerCase().includes("muro")) {
+    area = largo * (alto || 2.4);
   }
   
-  const volume = Math.round(area * espesor * 10000) / 10000;
+  const volume = Math.round(area * (espesor || 0.1) * 10000) / 10000;
   
   return { area, volume };
 };
@@ -60,9 +47,7 @@ export const calculateGeometricData = (dims: Dimensions, systemId: string | null
 export const calculateMaterialQuantities = (
   systemId: string | null, 
   dims: Dimensions,
-  prices: Record<string, number>,
-  wasteMargin: number = 0,
-  dosage?: DosageSelection
+  prices: Record<string, number> = {}
 ): MaterialLine[] => {
   if (!systemId) return [];
   const system = SYSTEMS_CATALOG.find(s => s.id === systemId);
@@ -71,82 +56,24 @@ export const calculateMaterialQuantities = (
   const { area, volume } = calculateGeometricData(dims, systemId);
   const base = system.baseUnit === 'm2' ? area : (system.baseUnit === 'mt' || system.baseUnit === 'm' ? area : volume);
 
-  let materialIds = [...system.materialIds];
-
-  if (dosage && system.category === "Obra Gruesa") {
-    // 1. Lógica Mezclado (Mixer vs Obra)
-    if (dosage.mezclado === "Obra (Trompo)") {
-        materialIds = materialIds.filter(id => !id.startsWith("horm_"));
-        if (!materialIds.includes("arena_m3")) materialIds.push("arena_m3");
-        if (!materialIds.includes("gravilla_m3")) materialIds.push("gravilla_m3");
-        if (!materialIds.includes("cem_saco")) materialIds.push("cem_saco");
-    } else {
-        // Nomenclatura Norma NCh 170 (Grados G)
-        const gradeMap: Record<string, string> = {
-            "G-17": "horm_g17",
-            "G-20": "horm_g20",
-            "G-25": "horm_g25",
-            "G-30": "horm_g30",
-            "G-35": "horm_g35",
-            "G-40": "horm_g40"
-        };
-        const concreteId = gradeMap[dosage.resistencia] || "horm_g20";
-        materialIds = materialIds.filter(id => !id.startsWith("horm_") && id !== "arena_m3" && id !== "gravilla_m3" && id !== "cem_saco");
-        materialIds.push(concreteId);
-    }
-
-    // 2. Reemplazar Armadura
-    materialIds = materialIds.filter(id => !id.startsWith("malla_") && !id.startsWith("fierro_"));
-    materialIds.push(dosage.armaduraDetalle);
-
-    // 3. Aditivos Especiales + Lógica NCh 170 GB
-    const activeAditivos = new Set(dosage.aditivos || []);
-    if (dosage.colocacion === "GB") {
-        activeAditivos.add("adit_plast"); // Plastificante obligatorio para GB
-    }
-
-    activeAditivos.forEach(a => {
-        if (a === 'impermeabilizante' && !materialIds.includes('adit_imper')) materialIds.push('adit_imper');
-        if (a === 'fibra' && !materialIds.includes('adit_fibra')) materialIds.push('adit_fibra');
-        if (a === 'retardante' && !materialIds.includes('adit_retar')) materialIds.push('adit_retar');
-        if (a === 'adit_plast' && !materialIds.includes('adit_plast')) materialIds.push('adit_plast');
-    });
-
-    // 4. Inyectar Servicios de Bombeo (Obligatorio en GB)
-    if (dosage.colocacion === "GB" || (dosage.vaciado && dosage.vaciado !== "Directa")) {
-        if (!materialIds.includes("serv_bomba")) materialIds.push("serv_bomba");
-    }
-
-    // 5. Inyectar Acabados
-    if (dosage.acabado === "Helicóptero") materialIds.push("acab_heli");
-    if (dosage.acabado === "Escobillado") materialIds.push("acab_escob");
-  }
-
-  return materialIds.map(mid => {
+  return system.materialIds.map(mid => {
     const mat = MATERIALS_CATALOG.find(m => m.id === mid);
     if (!mat) return null;
 
-    const safetyFactor = 1 + wasteMargin;
-    let coverage = mat.coverage;
-    if (dosage?.mezclado === "Obra (Trompo)") {
-        if (mat.id === "cem_saco") coverage = 8.5; 
-        if (mat.id === "arena_m3") coverage = 0.65;
-        if (mat.id === "gravilla_m3") coverage = 0.85;
+    // Lógica Senior de Factores de Pérdida AEC-CHILE
+    let wasteFactor = 1.05; // 5% base para Hormigones/Acero
+    if (mat.category === "Techumbres" || mat.id.includes("madera") || mat.id.includes("pino")) {
+        wasteFactor = 1.15; // 15% para Techumbres y cortes de madera
     }
 
-    const calculationBase = (mat.id.startsWith("acab_")) ? area : base;
-    const qty = calculationBase * coverage * safetyFactor;
-    let price = prices[mat.id] || mat.refPrice;
-
-    if (dosage?.secado === "R-7" && mat.category === "Hormigones" && mat.id.startsWith("horm_")) {
-      price = price * 1.20;
-    }
+    const qty = base * mat.coverage * wasteFactor;
+    const price = prices[mat.id] || mat.refPrice;
 
     return {
       id: mat.id,
-      name: mat.name + (dosage?.secado === "R-7" && mat.id.startsWith("horm_") ? " (R-7)" : ""),
+      name: mat.name,
       unit: mat.unit,
-      baseQuantity: calculationBase * coverage,
+      baseQuantity: base * mat.coverage,
       quantity: qty,
       price: Math.round(price),
       total: Math.round(qty * price),
@@ -160,20 +87,25 @@ export const calculateTotalCost = (
   dims: Dimensions,
   materials: MaterialLine[]
 ): CostBreakdown => {
-  if (!dims.largo || dims.largo <= 0) {
-    return { materials: 0, labor: 0, costoDirecto: 0, gg: 0, profit: 0, total: 0, volume: 0 };
-  }
-
   const matTotal = materials.reduce((a, m) => a + m.total, 0);
   const { area, volume } = calculateGeometricData(dims, systemId);
   const sys = SYSTEMS_CATALOG.find(s => s.id === systemId);
   
   const baseValue = sys?.baseUnit === 'm2' ? area : (sys?.baseUnit === 'mt' || sys?.baseUnit === 'm' ? area : volume);
   
+  // 1. COSTO DIRECTO (Suma de APU)
   const labor = Math.round(baseValue * (sys?.laborRate || 0));
   const direct = matTotal + labor;
-  const gg = Math.round(direct * 0.12); 
+
+  // 2. GASTOS GENERALES (12%)
+  const gg = Math.round(direct * 0.12);
+
+  // 3. UTILIDAD (15%)
   const profit = Math.round((direct + gg) * 0.15);
+
+  // 4. IVA (19%) - Obligatorio
+  const subtotal = direct + gg + profit;
+  const iva = Math.round(subtotal * 0.19);
 
   return { 
     materials: matTotal, 
@@ -181,7 +113,8 @@ export const calculateTotalCost = (
     costoDirecto: direct, 
     gg, 
     profit, 
-    total: Math.round(direct + gg + profit),
+    iva,
+    total: Math.round(subtotal + iva),
     volume
   };
 };

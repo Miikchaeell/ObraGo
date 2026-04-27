@@ -2,1035 +2,282 @@
 // @ts-nocheck
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
-import { ChevronLeft, RotateCcw, Camera, Loader2, CheckCircle2, Mic, CreditCard, Share2, Zap, Download, FileText, ShieldAlert, ShieldCheck, ShoppingCart, Lock, Leaf, Droplets, Recycle, Sun, Truck, Thermometer, CloudLightning, Gavel, TrendingUp, Wallet } from "lucide-react";
+import { ChevronLeft, RotateCcw, Camera, Loader2, CheckCircle2, Mic, CreditCard, Share2, Zap, Download, FileText, ShieldAlert, ShieldCheck, ShoppingCart, Lock, Leaf, Droplets, Recycle, Sun, Truck, Thermometer, CloudLightning, Gavel, TrendingUp, Wallet, MessageSquare, Box } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { calculateMaterialQuantities, calculateTotalCost } from "@/services/calculator";
 import { useAuth } from "@/context/AuthContext";
 import * as XLSX from 'xlsx';
-import imageCompression from 'browser-image-compression';
 import { generateSumaAlzadaContract } from "@/services/contractGenerator";
 import VoiceAssistant from "@/components/VoiceAssistant";
 import AROverlay from "@/components/AROverlay";
 
-/**
- * MOTOR DE INGENIERÍA AEC OBRA GO - V9.5
- * REINGENIERÍA DE PRODUCCIÓN: DESBLOQUEO TOTAL - SIN PAYWALLS
- */
-const generateElitePDF = (projectName, scanResult, costBreakdown, materials, userSignature, voiceNotes, gpsCoords, blockchainHash) => {
+const generateElitePDF = async (projectName, scanResult, costBreakdown, materials, userSignature) => {
   try {
     const doc = new jsPDF();
-    const primaryColor = [212, 175, 55]; // Gold #D4AF37
+    const primaryColor = [15, 17, 21]; 
+    const accentColor = [212, 175, 55]; 
 
-    // --- PÁGINA 1: RESUMEN DE INGENIERÍA ---
-    doc.setFillColor(15, 17, 21);
-    doc.rect(0, 0, 210, 25, 'F');
-    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.rect(0, 0, 210, 30, 'F');
+    doc.setTextColor(accentColor[0], accentColor[1], accentColor[2]);
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(16);
-    doc.text("OBRA GO ELITE - REPORTE TÉCNICO DE OBRA", 105, 15, { align: "center" });
+    doc.setFontSize(18);
+    doc.text("OBRA GO ELITE - REPORTE DE INGENIERÍA AEC-CHILE", 105, 18, { align: "center" });
 
     doc.setTextColor(0, 0, 0);
-    doc.setFontSize(12);
-    doc.text("RESUMEN DE CUBICACIÓN AEC (NCh 170/430)", 15, 40);
     doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-    doc.text(`Proyecto: ${projectName || "Obra Nueva"}`, 15, 50);
-    doc.text(`Elemento Analizado: ${scanResult?.partida || "No especificado"}`, 15, 57);
-    doc.text(`Fecha de Emisión: ${new Date().toLocaleDateString()}`, 15, 64);
-    doc.text(`Ingeniero Responsable: ObraGo - AEC Engineering`, 15, 71);
-    
-    if (voiceNotes) {
-      doc.setFont("helvetica", "italic");
-      doc.setFontSize(8);
-      doc.setTextColor(100, 100, 100);
-      doc.text(`Nota de Voz Transcrita: "${voiceNotes}"`, 15, 78);
-    }
+    doc.text(`PROYECTO: ${projectName?.toUpperCase() || "SIN NOMBRE"}`, 15, 40);
+    doc.text(`PARTIDA MAESTRA: ${scanResult?.partida || "CUBICACIÓN AEC"}`, 15, 46);
+    doc.text(`FECHA: ${new Date().toLocaleDateString()}`, 15, 52);
 
-    // Tabla de materiales calculados con 5% de pérdida
+    // APU DETALLADO POR PARTIDA
     autoTable(doc, {
-      startY: 80,
-      head: [['Ítem', 'Detalle Material (5% Pérdida)', 'Cantidad', 'Unidad', 'Total Estimado']],
-      body: materials.map((m, i) => [
-        `1.${i+1}`, 
+      startY: 60,
+      head: [['MATERIAL / RECURSO', 'CANTIDAD (INC. PÉRDIDA)', 'UND', 'PRECIO UNIT.', 'TOTAL']],
+      body: materials.map(m => [
         m.name, 
         m.quantity.toFixed(2), 
         m.unit, 
-        `$${Math.round(m.total).toLocaleString('es-CL')}`
+        `$${m.price.toLocaleString('es-CL')}`, 
+        `$${m.total.toLocaleString('es-CL')}`
       ]),
-      theme: 'striped',
-      headStyles: { fillColor: [15, 17, 21], textColor: primaryColor }
-    });
-
-    const totalY = (doc as any).lastAutoTable.finalY + 15;
-    doc.setFontSize(14);
-    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.text(`TOTAL PRESUPUESTO INCL. IVA: $${Math.round(costData.total * 1.19).toLocaleString('es-CL')}`, 15, totalY);
-
-    // --- PÁGINA 2: EL MINCHO CHICO (APU DETALLADO) ---
-    doc.addPage();
-    doc.setFillColor(15, 17, 21);
-    doc.rect(0, 0, 210, 25, 'F');
-    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.text("EL MINCHO CHICO - ANÁLISIS DE PRECIOS UNITARIOS", 105, 15, { align: "center" });
-
-    doc.setTextColor(0, 0, 0);
-    doc.setFontSize(12);
-    doc.text("DESGLOSE DE INCIDENCIAS AEC", 15, 40);
-
-    autoTable(doc, {
-      startY: 50,
-      head: [['Componente', 'Porcentaje', 'Incidencia Estimada']],
-      body: [
-        ['Materiales (Inc. Factor de Pérdida)', '38%', `$${Math.round(costData.materials).toLocaleString('es-CL')}`],
-        ['Mano de Obra (MO)', '35%', `$${Math.round(costData.labor).toLocaleString('es-CL')}`],
-        ['Gastos Generales (GG)', '12%', `$${Math.round(costData.gg).toLocaleString('es-CL')}`],
-        ['Utilidad neta', '15%', `$${Math.round(costData.profit).toLocaleString('es-CL')}`],
-      ],
       theme: 'grid',
-      headStyles: { fillColor: [30, 30, 30], textColor: [255, 255, 255] }
+      headStyles: { fillColor: primaryColor, textColor: accentColor },
+      styles: { fontSize: 8 }
     });
 
-    // Firma del Usuario (Si existe)
+    const cascadeY = (doc as any).lastAutoTable.finalY + 15;
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.text("CASCADA COMERCIAL AEC-CHILE", 15, cascadeY);
+    
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.text(`1. COSTO DIRECTO (CD): $${costBreakdown.costoDirecto.toLocaleString('es-CL')}`, 15, cascadeY + 8);
+    doc.text(`2. GASTOS GENERALES (12%): $${costBreakdown.gg.toLocaleString('es-CL')}`, 15, cascadeY + 14);
+    doc.text(`3. UTILIDAD (15%): $${costBreakdown.profit.toLocaleString('es-CL')}`, 15, cascadeY + 20);
+    doc.setTextColor(200, 0, 0);
+    doc.text(`4. IVA (19%): $${costBreakdown.iva.toLocaleString('es-CL')}`, 15, cascadeY + 26);
+    
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text(`TOTAL FINAL REPORTE: $${costBreakdown.total.toLocaleString('es-CL')}`, 15, cascadeY + 40);
+
     if (userSignature) {
-      const userY = (doc as any).lastAutoTable.finalY + 40;
-      doc.addImage(userSignature, 'PNG', 15, userY, 50, 20);
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(8);
-      doc.text("FIRMA DEL RESPONSABLE EN TERRENO", 15, userY + 25);
-      doc.setFont("helvetica", "normal");
-      doc.text(`Fecha: ${new Date().toLocaleString()}`, 15, userY + 30);
-      doc.text(`Validación GPS: ${gpsCoords ? `${gpsCoords.latitude}, ${gpsCoords.longitude}` : 'San Fernando, Chile'}`, 15, userY + 35);
-    }
-
-    // Firma Digital de Michael
-    const finalY = (doc as any).lastAutoTable.finalY + 40;
-    doc.setFont("courier", "bolditalic");
-    doc.setFontSize(10);
-    doc.text("__________________________", 150, finalY, { align: "center" });
-    doc.text("Firmado Digitalmente por ObraGo", 150, finalY + 8, { align: "center" });
-    doc.text("Fundador e Ingeniero Senior Obra Go", 150, finalY + 14, { align: "center" });
-    doc.text(`ID Validación: AEC-${Math.random().toString(36).substring(7).toUpperCase()}`, 150, finalY + 20, { align: "center" });
-
-    // [v17.0] ALERTAS CRÍTICAS (CLIMA Y MEDIACIÓN)
-    if (scanResult?.weather_risk && scanResult.weather_risk.status !== 'clear') {
-      doc.setFillColor(255, 243, 224);
-      doc.rect(15, finalY + 30, 180, 20, 'F');
-      doc.setFontSize(10);
-      doc.setTextColor(230, 81, 0);
-      doc.text(`ALERTA CLIMÁTICA: ${scanResult.weather_risk.alert}`, 20, finalY + 38);
-      doc.setFontSize(8);
-      doc.text(scanResult.weather_risk.recommendation, 20, finalY + 44);
-    }
-
-    if (blockchainHash) {
+      doc.addImage(userSignature, 'PNG', 15, 250, 40, 15);
       doc.setFontSize(7);
-      doc.setTextColor(100, 100, 100);
-      doc.text(`HASH BLOCKCHAIN: ${blockchainHash}`, 105, 290, { align: "center" });
-      doc.text("Evidencia inmutable protegida por ObraGo Blockchain Ledger", 105, 293, { align: "center" });
+      doc.text("FIRMA RESPONSABLE AEC", 15, 268);
     }
 
-    // [v15.0] ANEXO SUSTENTABLE
-    if (scanResult?.environmental_impact) {
-      doc.addPage();
-      doc.setFillColor(240, 248, 240); // Soft Green
-      doc.rect(0, 0, 210, 297, 'F');
-      
-      doc.setFontSize(22);
-      doc.setTextColor(34, 139, 34); // Forest Green
-      doc.text("CERTIFICADO DE SUSTENTABILIDAD", 105, 40, { align: "center" });
-      
-      doc.setFontSize(12);
-      doc.setTextColor(0, 0, 0);
-      doc.text("Análisis de Impacto Ambiental AEC - ObraGo V15.0", 105, 50, { align: "center" });
-      
-      autoTable(doc, {
-        startY: 70,
-        head: [['Indicador Ambiental', 'Valor Estimado', 'Unidad']],
-        body: [
-          ['Huella de Carbono (CO2)', scanResult.environmental_impact.co2_kg, 'kg CO2'],
-          ['Residuos Totales', scanResult.environmental_impact.waste_m3, 'm3'],
-          ['Potencial Solar', scanResult.environmental_impact.green_tech_expansion?.solar_kwh_month || 0, 'kWh/mes'],
-          ['Ahorro Térmico Est.', `${scanResult.environmental_impact.green_tech_expansion?.thermal_savings_percent || 0}%`, 'Eficiencia'],
-          ['Logística (Peso Total)', `${scanResult.environmental_impact.green_tech_expansion?.logistics_total_weight_kg || 0}`, 'kg']
-        ],
-        theme: 'striped',
-        headStyles: { fillColor: [34, 139, 34] }
-      });
-      
-      const finalEnvY = (doc as any).lastAutoTable.finalY + 20;
-      doc.setFontSize(14);
-      doc.text("RECOMENDACIÓN DE MATERIALES BIO-BASADOS:", 15, finalEnvY);
-      doc.setFontSize(10);
-      doc.text(scanResult.environmental_impact.green_tech_expansion?.bio_alternative || "No disponible", 15, finalEnvY + 10, { maxWidth: 180 });
-      
-      doc.text(`TRANSPORTE RECOMENDADO: ${scanResult.environmental_impact.green_tech_expansion?.recommended_truck || "Simple"}`, 150, finalEnvY + 25);
-    }
-
-    // [v19.0] CERTIFICADO DE CALIDAD Y POST-VENTA
-    if (scanResult?.quality_audit) {
-      doc.addPage();
-      doc.setFillColor(30, 30, 30); // Dark Profile
-      doc.rect(0, 0, 210, 297, 'F');
-      
-      doc.setFontSize(22);
-      doc.setTextColor(212, 175, 55); // Gold
-      doc.text("CERTIFICADO DE CALIDAD AEC", 105, 40, { align: "center" });
-      
-      doc.setFontSize(10);
-      doc.setTextColor(200, 200, 200);
-      doc.text("Auditoría Preventiva de Post-Venta - ObraGo V19.0", 105, 50, { align: "center" });
-      
-      doc.setFillColor(40, 40, 40);
-      doc.roundedRect(20, 70, 170, 40, 5, 5, 'F');
-      doc.setFontSize(30);
-      doc.text(`${scanResult.quality_audit.score}%`, 105, 95, { align: "center" });
-      doc.setFontSize(10);
-      doc.text("PUNTAJE DE CALIDAD FINAL", 105, 105, { align: "center" });
-      
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(14);
-      doc.text("DETALLES DE LA AUDITORÍA:", 20, 130);
-      
-      let yPos = 140;
-      scanResult.quality_audit.defects_detected?.forEach(defect => {
-        doc.setFontSize(10);
-        doc.text(`- ${defect}`, 25, yPos);
-        yPos += 8;
-      });
-      
-      doc.setFontSize(12);
-      doc.setTextColor(212, 175, 55);
-      doc.text("RIESGO DE POST-VENTA:", 20, yPos + 10);
-      doc.setFontSize(10);
-      doc.setTextColor(255, 255, 255);
-      doc.text(scanResult.quality_audit.post_venta_warning, 20, yPos + 20, { maxWidth: 170 });
-      
-      doc.setFontSize(8);
-      doc.setTextColor(150, 150, 150);
-      doc.text("Este certificado es una auditoría visual por IA. No reemplaza la inspección técnica de obra (ITO).", 105, 280, { align: "center" });
-    }
-
-    // [v20.0] INTELIGENCIA FINANCIERA Y PROYECCIÓN
-    if (scanResult?.financial_forecast) {
-      doc.addPage();
-      doc.setFillColor(245, 245, 245);
-      doc.rect(0, 0, 210, 297, 'F');
-      
-      doc.setFontSize(22);
-      doc.setTextColor(0, 0, 0);
-      doc.text("PROYECCIÓN FINANCIERA DE OBRA", 105, 40, { align: "center" });
-      
-      doc.setFontSize(10);
-      doc.text("Análisis Predictivo de Mercado AEC - ObraGo V20.0", 105, 50, { align: "center" });
-      
-      autoTable(doc, {
-        startY: 70,
-        head: [['Material / Partida', 'Tendencia', 'Variación Est.']],
-        body: [
-          [scanResult.partida, scanResult.financial_forecast.trend === 'up' ? 'ALZA' : 'BAJA', `${scanResult.financial_forecast.expected_variation_percent}%`],
-          ['Impacto Financiero Total', '', `$${scanResult.financial_forecast.opportunity_cost_clp?.toLocaleString('es-CL')}`]
-        ],
-        theme: 'grid',
-        headStyles: { fillColor: [0, 0, 0] }
-      });
-      
-      const finalFinY = (doc as any).lastAutoTable.finalY + 20;
-      doc.setFontSize(14);
-      doc.text("ESTRATEGIA RECOMENDADA:", 20, finalFinY);
-      doc.setFontSize(12);
-      doc.setTextColor(scanResult.financial_forecast.buy_recommendation === 'buy_now' ? [200, 0, 0] : [0, 150, 0]);
-      doc.text(scanResult.financial_forecast.buy_recommendation === 'buy_now' ? "COMPRAR Y STOCKEAR HOY" : "ESPERAR MEJOR MOMENTO", 20, finalFinY + 10);
-      
-      doc.setTextColor(0, 0, 0);
-      doc.setFontSize(10);
-      doc.text("ANÁLISIS TÉCNICO:", 20, finalFinY + 25);
-      doc.text(scanResult.financial_forecast.analysis_reason, 20, finalFinY + 35, { maxWidth: 170 });
-    }
-
-    doc.save(`Reporte_Elite_ObraGo_${projectName || 'Scan'}.pdf`);
-  } catch (error) {
-    console.error("PDF Fail:", error);
-    alert("Error crítico en el motor de PDF. Contacte a soporte.");
-  }
+    doc.save(`Reporte_Elite_AEC_${projectName || 'Obra'}.pdf`);
+  } catch (e) { console.error(e); }
 };
 
 export default function Scanner() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
   const [searchParams] = useSearchParams();
-
-  // Cuenta Maestra CEO
-  const isCEO = user?.email === 'michael.seura.delgado@gmail.com' || user?.phone === '+56969020506';
-  const isUnlocked = isCEO || searchParams.get('status') === 'approved';
+  const isUnlocked = user?.email === 'michael.seura.delgado@gmail.com' || searchParams.get('status') === 'approved';
 
   const [step, setStep] = useState('config');
   const [name, setName] = useState('');
-  const [region, setRegion] = useState('');
-  const [comuna, setComuna] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [isPaying, setIsPaying] = useState(false);
   const [scanResult, setScanResult] = useState(null);
   const [costBreakdown, setCostBreakdown] = useState(null);
   const [materials, setMaterials] = useState([]);
-  const [signature, setSignature] = useState(null);
-  const [showSignaturePad, setShowSignaturePad] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
-  const [voiceNotes, setVoiceNotes] = useState('');
-  const [blockchainHash, setBlockchainHash] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const [showAR, setShowAR] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [showSignaturePad, setShowSignaturePad] = useState(false);
+  const [signature, setSignature] = useState(null);
+  const canvasRef = useRef(null);
   const [isDrawing, setIsDrawing] = useState(false);
 
-  // [v20.1] Auto-Restore and Auto-Download on MP Return
   useEffect(() => {
-    const status = searchParams.get('status');
-    if (status === 'approved') {
-      const savedData = sessionStorage.getItem('pendingScanData');
-      if (savedData) {
-        const parsed = JSON.parse(savedData);
+    if (searchParams.get('status') === 'approved') {
+      const saved = sessionStorage.getItem('pendingScanData');
+      if (saved) {
+        const parsed = JSON.parse(saved);
         setScanResult(parsed.scanResult);
         setMaterials(parsed.materials);
         setCostBreakdown(parsed.costBreakdown);
-        setSignature(parsed.signature);
-        setVoiceNotes(parsed.voiceNotes);
-        setName(parsed.name);
         setStep('result');
-        
-        // Disparar descarga automática después de un breve delay
-        // Capturar GPS antes de generar PDF
-        if (navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition(
-            (position) => {
-              const coords = { latitude: position.coords.latitude, longitude: position.coords.longitude };
-              generateElitePDF(parsed.name, parsed.scanResult, parsed.costBreakdown, parsed.materials, parsed.signature, parsed.voiceNotes, coords);
-            },
-            () => {
-              generateElitePDF(parsed.name, parsed.scanResult, parsed.costBreakdown, parsed.materials, parsed.signature, parsed.voiceNotes, null);
-            }
-          );
-        } else {
-          generateElitePDF(parsed.name, parsed.scanResult, parsed.costBreakdown, parsed.materials, parsed.signature, parsed.voiceNotes, null);
-        }
       }
     }
   }, [searchParams]);
 
-  const toggleRecording = () => {
-    if (!isRecording) {
-      setIsRecording(true);
-      // Simular transcripción después de 3 segundos
-      setTimeout(() => {
-        setIsRecording(false);
-        setVoiceNotes("Se detecta necesidad de refuerzo estructural en la zona sur del radier según inspección visual.");
-      }, 3000);
-    } else {
-      setIsRecording(false);
-    }
+  const handleFileUpload = async (e) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setStep('loading');
+    try { new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3').play(); } catch(e){}
+
+    const formData = new FormData();
+    for (let f of files) formData.append('images', f);
+
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/analyze`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+        body: formData
+      });
+      const data = await res.json();
+      setScanResult(data);
+      const mats = calculateMaterialQuantities(data.sistema_id, data.dimensiones);
+      setMaterials(mats);
+      setCostBreakdown(calculateTotalCost(data.sistema_id, data.dimensiones, mats));
+      setStep('result');
+      try { new Audio('https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3').play(); } catch(e){}
+    } catch (err) { setStep('config'); }
   };
 
-  const startDrawing = (e: any) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    
-    ctx.beginPath();
-    ctx.moveTo(
-      (e.clientX || e.touches[0].clientX) - rect.left,
-      (e.clientY || e.touches[0].clientY) - rect.top
-    );
+  const handleWhatsAppShare = () => {
+    const msg = encodeURIComponent(`🚀 REPORTE AEC-CHILE\nProyecto: ${name}\nTotal: $${costBreakdown.total.toLocaleString('es-CL')}\nValidado por ObraGo Senior.`);
+    window.open(`https://wa.me/?text=${msg}`, '_blank');
+  };
+
+  const startDrawing = (e) => {
     setIsDrawing(true);
-  };
-
-  const draw = (e: any) => {
-    if (!isDrawing || !canvasRef.current) return;
     const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
     const rect = canvas.getBoundingClientRect();
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    ctx.lineTo(
-      (e.clientX || e.touches[0].clientX) - rect.left,
-      (e.clientY || e.touches[0].clientY) - rect.top
-    );
-    ctx.strokeStyle = '#FFFFFF';
-    ctx.lineWidth = 2;
-    ctx.stroke();
+    const x = (e.clientX || e.touches[0].clientX) - rect.left;
+    const y = (e.clientY || e.touches[0].clientY) - rect.top;
+    ctx.beginPath(); ctx.moveTo(x, y);
   };
 
-  const stopDrawing = () => setIsDrawing(false);
-
-  const clearSignature = () => {
+  const draw = (e) => {
+    if (!isDrawing) return;
     const canvas = canvasRef.current;
-    if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    ctx?.clearRect(0, 0, canvas.width, canvas.height);
-    setSignature(null);
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX || e.touches[0].clientX) - rect.left;
+    const y = (e.clientY || e.touches[0].clientY) - rect.top;
+    ctx.lineTo(x, y); ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 2; ctx.stroke();
   };
 
   const saveSignature = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    setSignature(canvas.toDataURL('image/png'));
+    setSignature(canvasRef.current.toDataURL());
     setShowSignaturePad(false);
   };
 
-  const handleFileUpload = async (event) => {
-    const files = Array.from(event.target.files);
-    if (!files || files.length === 0) return;
-
-    if (files.length > 10) {
-      alert("Puedes subir un máximo de 10 fotografías o planos a la vez.");
-      return;
-    }
-
-    setIsLoading(true);
-    setStep('loading');
-
-    const formData = new FormData();
-    
-    // Configuración de compresión
-    const options = {
-      maxSizeMB: 1, // Reducimos a 1MB máximo por imagen para que 10 fotos no pesen más de 10MB
-      maxWidthOrHeight: 1280,
-      useWebWorker: true
-    };
-
-    // Comprimir todas las imágenes en paralelo
-    const compressedFiles = await Promise.all(
-      files.map(async (file) => {
-        try {
-          return await imageCompression(file as File, options);
-        } catch (e) {
-          console.error("Error comprimiendo, usando original", e);
-          return file; // Fallback al original
-        }
-      })
-    );
-
-    // Añadir al FormData
-    compressedFiles.forEach((file, index) => {
-      formData.append('images', file, `image_${index}.jpg`); // 'images' coincide con upload.array('images', 10)
-    });
-
-    try {
-      const token = localStorage.getItem("token");
-      const API_URL = import.meta.env.VITE_API_URL || "";
-      
-      const response = await fetch(`${API_URL}/api/analyze`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
-        body: formData
-      });
-
-      if (!response.ok) throw new Error("Error en el análisis");
-
-      const result = await response.json();
-      const scanData = result.data;
-      if (result.blockchain_hash) {
-        setBlockchainHash(result.blockchain_hash);
-      }
-
-      // Calcular costos usando el motor de ingeniería (Waste Margin 5%)
-      const calculatedMaterials = calculateMaterialQuantities(
-        scanData.sistema_id,
-        scanData.dimensiones,
-        {}, // Precios por defecto
-        0.05 // 5% de pérdida exigido por el usuario
-      );
-
-      const calculatedCosts = calculateTotalCost(
-        scanData.sistema_id,
-        scanData.dimensiones,
-        calculatedMaterials
-      );
-
-      setScanResult(scanData);
-      setMaterials(calculatedMaterials);
-      setCostBreakdown(calculatedCosts);
-      
-      // PERSISTIR TOTAL PARA EL SUPPORT WIDGET
-      const totalIva = Math.round(calculatedCosts.total * 1.19);
-      localStorage.setItem('lastScanTotal', totalIva.toString());
-      // Forzar evento storage para pestañas abiertas si es necesario
-      window.dispatchEvent(new Event('storage'));
-
-      setStep('result');
-
-      // Guardar en historial
-      if (location.state?.projectId) {
-          const projectData = {
-              workProjectId: location.state.projectId,
-              elemento: scanData.partida,
-              sistema: scanData.subtipo,
-              dimensiones: scanData.dimensiones,
-              materiales: calculatedMaterials,
-              totalCost: calculatedCosts,
-              image: result.imageUrl
-          };
-          
-          await fetch(`${API_URL}/api/projects`, {
-              method: 'POST',
-              headers: { 
-                  'Authorization': `Bearer ${token}`,
-                  'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({ projectData: JSON.stringify(projectData) })
-          });
-      }
-
-    } catch (error) {
-      console.error("Scan Error:", error);
-      alert("Error al analizar la imagen. Intenta de nuevo.");
-      setStep('config');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleDownload = async () => {
-    if (!isUnlocked) {
-      setIsPaying(true);
-      try {
-        // Persistir datos para recuperarlos al volver del checkout
-        sessionStorage.setItem('pendingScanData', JSON.stringify({
-          scanResult,
-          materials,
-          costBreakdown,
-          signature,
-          voiceNotes,
-          name
-        }));
-
-        const token = localStorage.getItem("token");
-        const API_URL = import.meta.env.VITE_API_URL || "";
-        const res = await fetch(`${API_URL}/api/payment/create-preference`, {
-          method: 'POST',
-          headers: { 
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ projectName: name })
-        });
-        
-        const data = await res.json();
-        if (data.initPoint) {
-          window.location.href = data.initPoint;
-        }
-      } catch (error) {
-        console.error("Payment Error:", error);
-        alert("Error al conectar con Mercado Pago");
-      } finally {
-        setIsPaying(false);
-      }
-      return;
-    }
-
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const coords = { latitude: position.coords.latitude, longitude: position.coords.longitude };
-          generateElitePDF(name, scanResult, costBreakdown, materials, signature, voiceNotes, coords, blockchainHash);
-        },
-        () => {
-          generateElitePDF(name, scanResult, costBreakdown, materials, signature, voiceNotes, null, blockchainHash);
-        }
-      );
-    } else {
-      generateElitePDF(name, scanResult, costBreakdown, materials, signature, voiceNotes, null, blockchainHash);
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-[#0f1115] text-white flex flex-col max-w-lg mx-auto font-sans">
-      <nav className="p-4 border-b border-white/10 bg-black sticky top-0 z-50 flex justify-between items-center text-[#D4AF37]">
+    <div className="min-h-screen bg-[#0F1115] text-white max-w-lg mx-auto flex flex-col font-sans">
+      <nav className="p-4 border-b border-white/10 flex justify-between items-center glass-card sticky top-0 z-50">
         <button onClick={() => navigate(-1)} className="p-2 hover:bg-white/5 rounded-full"><ChevronLeft /></button>
-        <h1 className="text-sm font-black uppercase tracking-tighter">Obra Go Elite</h1>
+        <h1 className="text-xs font-black uppercase tracking-[0.2em] gold-gradient-text">Obra Go Senior</h1>
         <button onClick={() => setStep('config')} className="p-2 hover:bg-white/5 rounded-full"><RotateCcw /></button>
       </nav>
 
-      <main className="flex-1 p-6 flex flex-col justify-center">
+      <main className="flex-1 p-6 flex flex-col">
         {step === 'config' && (
-          <div className="space-y-6">
-            <h2 className="text-4xl font-black italic tracking-tighter text-[#D4AF37]">Dimensiones</h2>
-            <div className="space-y-4">
-              <input 
-                type="text" 
-                placeholder="Nombre Proyecto / Partida" 
-                value={name} 
-                onChange={(e) => setName(e.target.value)} 
-                className="w-full bg-white/5 border border-white/10 p-5 rounded-2xl text-lg font-bold focus:border-[#D4AF37] outline-none transition-all" 
-              />
-              <div className="grid grid-cols-2 gap-4">
-                <input 
-                  type="text" 
-                  placeholder="Región" 
-                  value={region} 
-                  onChange={(e) => setRegion(e.target.value)} 
-                  className="w-full bg-white/5 border border-white/10 p-4 rounded-xl text-sm font-bold focus:border-[#D4AF37] outline-none transition-all" 
-                />
-                <input 
-                  type="text" 
-                  placeholder="Comuna" 
-                  value={comuna} 
-                  onChange={(e) => setComuna(e.target.value)} 
-                  className="w-full bg-white/5 border border-white/10 p-4 rounded-xl text-sm font-bold focus:border-[#D4AF37] outline-none transition-all" 
-                />
-              </div>
+          <div className="space-y-8 animate-in fade-in duration-700">
+            <div className="space-y-2">
+              <h2 className="text-3xl font-black gold-gradient-text italic tracking-tighter">Captura de Terreno</h2>
+              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Base de Datos AEC-CHILE Activa</p>
             </div>
-            
-            <Button 
-              onClick={() => setStep('scan')}
-              className="w-full h-16 bg-[#D4AF37] text-black font-black rounded-2xl text-lg shadow-xl hover:scale-[1.02] active:scale-95 transition-all"
+            <input 
+              type="text" placeholder="Nombre de la Obra" value={name} onChange={(e) => setName(e.target.value)}
+              className="w-full bg-white/5 border border-white/10 p-5 rounded-2xl text-lg font-bold focus:border-[#D4AF37] outline-none"
+            />
+            <div 
+              className="aspect-square border-2 border-dashed border-[#D4AF37]/20 rounded-[48px] flex flex-col items-center justify-center gap-6 bg-[#D4AF37]/5 cursor-pointer group relative" 
+              onClick={() => document.getElementById('file-up').click()}
             >
-              SIGUIENTE: CAPTURAR
-            </Button>
-            <p className="text-[10px] text-center text-[#D4AF37]/40 font-bold uppercase tracking-widest">Validación de Campo: Activa</p>
-          </div>
-        )}
-
-        {step === 'scan' && (
-          <div className="flex flex-col items-center gap-8">
-            <div onClick={() => fileInputRef.current?.click()} className="w-56 h-56 border-4 border-dashed border-[#D4AF37]/30 rounded-[60px] flex flex-col items-center justify-center cursor-pointer hover:bg-white/5 transition-all group relative">
-              <Camera className="w-16 h-16 text-[#D4AF37] group-hover:scale-110 transition-transform mb-2" />
-              <span className="text-[#D4AF37]/70 font-bold text-xs text-center px-4">Subir hasta 10 fotos<br/>o planos 2D</span>
-              <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileUpload} accept="image/*,application/pdf" multiple />
-            </div>
-            
-            <div className="text-center space-y-2 mt-4">
-              <h3 className="text-2xl font-black italic tracking-tighter text-[#D4AF37]">Captura la Faena</h3>
-              <p className="text-sm text-[#D4AF37]/70">El Cerebro IA fusionará las imágenes</p>
-            </div>
-            
-            <div className="flex flex-col items-center gap-4">
-              <button 
-                onClick={toggleRecording}
-                className={`w-16 h-16 rounded-full flex items-center justify-center transition-all ${isRecording ? 'bg-red-500 animate-pulse scale-110 shadow-[0_0_20px_rgba(239,68,68,0.5)]' : 'bg-white/5 border border-white/10'}`}
-              >
-                <Mic className={`w-6 h-6 ${isRecording ? 'text-white' : 'text-slate-400'}`} />
-              </button>
-              <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                {isRecording ? 'Grabando Nota...' : (voiceNotes ? 'Nota Grabada ✓' : 'Grabar Observación')}
-              </p>
+              <Camera className="w-12 h-12 text-[#D4AF37] group-hover:scale-110 transition-transform" />
+              <p className="text-xs font-black text-white uppercase tracking-widest">Escanear Partida</p>
+              <input id="file-up" type="file" multiple hidden onChange={handleFileUpload} />
             </div>
           </div>
         )}
 
         {step === 'loading' && (
-          <div className="flex flex-col items-center gap-6">
-            <Loader2 className="w-16 h-16 text-[#D4AF37] animate-spin" />
-            <div className="text-center">
-                <h3 className="text-xl font-black text-[#D4AF37] uppercase italic">Analizando Terreno</h3>
-                <p className="text-xs text-slate-500 font-bold uppercase mt-2">Motor de Ingeniería AEC v9.5</p>
+          <div className="flex-1 flex flex-col items-center justify-center gap-10">
+            <div className="relative">
+              <div className="w-32 h-32 border-4 border-[#D4AF37]/10 rounded-full animate-pulse" />
+              <div className="absolute inset-0 w-32 h-32 border-4 border-t-[#D4AF37] rounded-full animate-spin" />
+            </div>
+            <div className="text-center space-y-2">
+              <h3 className="text-xl font-black gold-gradient-text italic">CUBICANDO AEC...</h3>
+              <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.4em]">Auditando Normas NCh 170 / NCh 430</p>
             </div>
           </div>
         )}
 
         {step === 'result' && scanResult && (
-          <div className="space-y-8 animate-in fade-in zoom-in duration-500">
-            <div className="bg-white/5 border border-white/10 p-10 rounded-[48px] text-center shadow-2xl relative overflow-hidden backdrop-blur-xl">
-              <div className="absolute top-0 right-0 p-6 flex gap-2">
-                  {voiceNotes && (
-                    <div className="px-3 py-1 bg-primary/10 border border-primary/20 rounded-full flex items-center gap-2">
-                      <Mic className="w-3 h-3 text-primary" />
-                      <span className="text-[8px] font-bold text-primary uppercase">Nota de Voz OK</span>
-                    </div>
-                  )}
-                  <CheckCircle2 className="w-6 h-6 text-[#D4AF37]" />
-              </div>
+          <div className="space-y-6 animate-in fade-in zoom-in duration-500">
+            <div className="glass-card p-8 rounded-[40px] text-center relative overflow-hidden">
+              <div className="scanning-line" />
+              <p className="text-[10px] font-black text-[#D4AF37] uppercase tracking-[0.3em] mb-4">Total Presupuesto AEC</p>
+              <h3 className="text-4xl font-black text-white tracking-tighter">${costBreakdown.total.toLocaleString('es-CL')}</h3>
               
-              <p className="text-[10px] font-black text-[#D4AF37] uppercase tracking-[0.3em] mb-4">Presupuesto AEC Generado</p>
-              <h3 className="text-5xl font-black text-white tracking-tighter">
-                ${Math.round(costBreakdown.total * 1.19).toLocaleString('es-CL')}
-              </h3>
-              
-              {voiceNotes && (
-                <div className="mt-4 p-4 bg-white/5 rounded-2xl border border-white/10">
-                  <p className="text-[9px] text-slate-500 font-bold uppercase mb-1">Observación de Campo (IA Transcribe)</p>
-                  <p className="text-[11px] text-slate-300 italic">"{voiceNotes}"</p>
-                </div>
-              )}
-
-              {scanResult.safety_analysis && (
-                <div className={`mt-4 p-4 rounded-2xl border ${scanResult.safety_analysis.status === 'safe' ? 'bg-green-500/10 border-green-500/30' : scanResult.safety_analysis.status === 'warning' ? 'bg-yellow-500/10 border-yellow-500/30' : 'bg-red-500/10 border-red-500/30'}`}>
-                   <div className="flex items-center gap-2 mb-2">
-                      {scanResult.safety_analysis.status === 'safe' ? <ShieldCheck className="w-4 h-4 text-green-400" /> : <ShieldAlert className="w-4 h-4 text-red-400" />}
-                      <p className={`text-[10px] font-black uppercase tracking-widest ${scanResult.safety_analysis.status === 'safe' ? 'text-green-400' : 'text-red-400'}`}>
-                        Auditoría de Seguridad: {scanResult.safety_analysis.status === 'safe' ? 'CUMPLE' : 'RIESGO DETECTADO'}
-                      </p>
-                   </div>
-                   <p className="text-[11px] text-slate-200 mb-2">{scanResult.safety_analysis.recommendation}</p>
-                   <div className="flex flex-wrap gap-2">
-                      {scanResult.safety_analysis.ppe_found?.map(ppe => (
-                        <span key={ppe} className="px-2 py-0.5 bg-white/5 rounded-full text-[8px] font-bold text-slate-400 uppercase">✓ {ppe}</span>
-                      ))}
-                   </div>
-                </div>
-              )}
-
-              {scanResult.environmental_impact && (
-                <div className="mt-4 p-5 bg-green-500/5 border border-green-500/20 rounded-[30px] space-y-4">
-                  <div className="flex items-center gap-2">
-                    <Leaf className="w-5 h-5 text-green-400" />
-                    <h4 className="text-xs font-black text-green-400 uppercase tracking-widest">Impacto Ambiental Sustentable</h4>
+              <div className="grid grid-cols-1 gap-4 mt-8 text-left">
+                <div className="p-5 bg-white/5 rounded-3xl border border-white/10">
+                  <p className="text-[10px] text-[#D4AF37] font-black uppercase mb-3">Cascada Comercial</p>
+                  <div className="space-y-2 text-xs">
+                    <div className="flex justify-between"><span>Costo Directo</span><span className="font-bold text-white">${costBreakdown.costoDirecto.toLocaleString('es-CL')}</span></div>
+                    <div className="flex justify-between"><span>Gastos Generales (12%)</span><span className="font-bold text-white">${costBreakdown.gg.toLocaleString('es-CL')}</span></div>
+                    <div className="flex justify-between"><span>Utilidad (15%)</span><span className="font-bold text-white">${costBreakdown.profit.toLocaleString('es-CL')}</span></div>
+                    <div className="flex justify-between text-red-400 font-bold pt-2 border-t border-white/5"><span>IVA (19%)</span><span>${costBreakdown.iva.toLocaleString('es-CL')}</span></div>
                   </div>
+                </div>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="p-3 bg-white/5 rounded-2xl">
-                      <p className="text-[8px] text-slate-500 font-bold uppercase mb-1">Huella CO2</p>
-                      <p className="text-sm font-black text-white">{scanResult.environmental_impact.co2_kg} kg CO2</p>
-                    </div>
-                    <div className="p-3 bg-white/5 rounded-2xl">
-                      <p className="text-[8px] text-slate-500 font-bold uppercase mb-1">Residuos</p>
-                      <p className="text-sm font-black text-white">{scanResult.environmental_impact.waste_m3} m³</p>
-                    </div>
-                  </div>
-
-                  {scanResult.environmental_impact.green_tech_expansion && (
-                    <div className="grid grid-cols-2 gap-3 mt-4">
-                      <div className="flex items-center gap-2 p-3 bg-yellow-500/10 rounded-2xl border border-yellow-500/20">
-                        <Sun className="w-4 h-4 text-yellow-400" />
-                        <div>
-                          <p className="text-[7px] text-yellow-400/70 font-black uppercase">Potencial Solar</p>
-                          <p className="text-[11px] font-black text-white">{scanResult.environmental_impact.green_tech_expansion.solar_kwh_month} kWh/mes</p>
-                        </div>
+                <div className="p-5 bg-white/5 rounded-3xl border border-white/10">
+                  <p className="text-[10px] text-[#D4AF37] font-black uppercase mb-3">Análisis por Partida</p>
+                  <p className="text-sm font-bold text-white mb-2">{scanResult.partida}</p>
+                  <div className="space-y-1">
+                    {materials.slice(0, 4).map(m => (
+                      <div key={m.id} className="flex justify-between text-[10px] text-slate-400 italic">
+                        <span>{m.name}</span>
+                        <span>{m.quantity.toFixed(1)} {m.unit}</span>
                       </div>
-                      <div className="flex items-center gap-2 p-3 bg-blue-500/10 rounded-2xl border border-blue-500/20">
-                        <Thermometer className="w-4 h-4 text-blue-400" />
-                        <div>
-                          <p className="text-[7px] text-blue-400/70 font-black uppercase">Ahorro Térmico</p>
-                          <p className="text-[11px] font-black text-white">+{scanResult.environmental_impact.green_tech_expansion.thermal_savings_percent}%</p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {scanResult.environmental_impact.green_tech_expansion?.logistics_total_weight_kg > 0 && (
-                    <div className="p-4 bg-white/5 rounded-2xl border border-white/10 flex items-center justify-between">
-                       <div className="flex items-center gap-3">
-                         <Truck className="w-5 h-5 text-slate-400" />
-                         <div>
-                            <p className="text-[8px] text-slate-500 font-black uppercase">Logística Eficiente</p>
-                            <p className="text-[10px] text-slate-300 font-bold">{scanResult.environmental_impact.green_tech_expansion.recommended_truck}</p>
-                         </div>
-                       </div>
-                       <p className="text-[11px] font-black text-[#D4AF37]">{scanResult.environmental_impact.green_tech_expansion.logistics_total_weight_kg} kg</p>
-                    </div>
-                  )}
-
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Leaf className="w-3 h-3 text-green-400/70" />
-                      <p className="text-[9px] text-slate-400 font-bold uppercase">Alternativa Bio-Basada</p>
-                    </div>
-                    <p className="text-[11px] text-slate-300 italic">{scanResult.environmental_impact.green_tech_expansion?.bio_alternative || "Consultar Copiloto"}</p>
-                  </div>
-
-                  <div className="flex items-center justify-between pt-2 border-t border-green-500/10">
-                    <div className="flex items-center gap-2">
-                      <Droplets className="w-3 h-3 text-blue-400" />
-                      <span className="text-[9px] font-bold text-slate-400 uppercase">Consumo Agua: {scanResult.environmental_impact.water_efficiency_liters}L</span>
-                    </div>
-                    <div className="flex gap-1">
-                      {[...Array(5)].map((_, i) => (
-                        <Leaf key={i} className={`w-3 h-3 ${i < scanResult.environmental_impact.green_score ? 'text-green-400' : 'text-slate-700'}`} />
-                      ))}
-                    </div>
+                    ))}
+                    {materials.length > 4 && <p className="text-[8px] text-slate-600 mt-1">+{materials.length - 4} materiales más en el reporte completo</p>}
                   </div>
                 </div>
-              )}
-
-              {scanResult.quality_audit && (
-                <div className="mt-4 p-5 bg-white/5 border border-white/10 rounded-[30px] space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                       <CheckCircle2 className="w-5 h-5 text-green-400" />
-                       <h4 className="text-xs font-black text-white uppercase tracking-widest">Auditoría de Calidad</h4>
-                    </div>
-                    <div className="flex flex-col items-end">
-                       <span className="text-[10px] text-slate-500 font-bold">QUALITY SCORE</span>
-                       <span className={`text-xl font-black ${scanResult.quality_audit.score > 90 ? 'text-green-400' : 'text-yellow-400'}`}>
-                         {scanResult.quality_audit.score}%
-                       </span>
-                    </div>
-                  </div>
-
-                  {scanResult.quality_audit.defects_detected?.length > 0 ? (
-                    <div className="space-y-2">
-                       <p className="text-[8px] text-red-400 font-black uppercase tracking-widest">Observaciones de Post-Venta</p>
-                       {scanResult.quality_audit.defects_detected.map((defect, idx) => (
-                         <div key={idx} className="flex items-start gap-2 text-[11px] text-slate-300">
-                            <span className="w-1.5 h-1.5 bg-red-400 rounded-full mt-1 shrink-0"></span>
-                            {defect}
-                         </div>
-                       ))}
-                    </div>
-                  ) : (
-                    <p className="text-[11px] text-green-400 font-bold italic">No se detectan defectos visuales de calidad.</p>
-                  )}
-
-                  <div className={`p-3 rounded-2xl border ${scanResult.quality_audit.criticality === 'low' ? 'bg-green-500/10 border-green-500/20' : 'bg-red-500/10 border-red-500/20'}`}>
-                     <p className="text-[9px] text-slate-400 font-bold uppercase mb-1">Impacto Post-Venta</p>
-                     <p className="text-[11px] text-slate-200 leading-tight">{scanResult.quality_audit.post_venta_warning}</p>
-                  </div>
-                </div>
-              )}
-
-              {scanResult.financial_forecast && (
-                <div className="mt-4 p-5 bg-black/40 border border-white/10 rounded-[30px] space-y-4 backdrop-blur-md">
-                   <div className="flex items-center gap-2">
-                      <TrendingUp className={`w-5 h-5 ${scanResult.financial_forecast.trend === 'up' ? 'text-red-400' : 'text-green-400'}`} />
-                      <h4 className="text-xs font-black text-white uppercase tracking-widest">Inteligencia Financiera</h4>
-                   </div>
-
-                   <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl">
-                      <div>
-                         <p className="text-[8px] text-slate-500 font-bold uppercase mb-1">Tendencia 60 Días</p>
-                         <p className={`text-sm font-black ${scanResult.financial_forecast.trend === 'up' ? 'text-red-400' : 'text-green-400'}`}>
-                           {scanResult.financial_forecast.trend === 'up' ? 'ALZA' : 'BAJA'} (+{scanResult.financial_forecast.expected_variation_percent}%)
-                         </p>
-                      </div>
-                      <div className="text-right">
-                         <p className="text-[8px] text-slate-500 font-bold uppercase mb-1">Recomendación</p>
-                         <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${scanResult.financial_forecast.buy_recommendation === 'buy_now' ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'}`}>
-                            {scanResult.financial_forecast.buy_recommendation === 'buy_now' ? 'COMPRAR HOY' : 'ESPERAR'}
-                         </span>
-                      </div>
-                   </div>
-
-                   <div className="flex items-center gap-3">
-                      <Wallet className="w-4 h-4 text-[#D4AF37]" />
-                      <p className="text-[11px] text-slate-300">
-                        Ahorro potencial si stockeas hoy: <span className="text-[#D4AF37] font-black">${scanResult.financial_forecast.opportunity_cost_clp?.toLocaleString('es-CL')}</span>
-                      </p>
-                   </div>
-                   
-                   <p className="text-[10px] text-slate-500 italic leading-tight">
-                     *Análisis basado en: {scanResult.financial_forecast.analysis_reason}
-                   </p>
-                </div>
-              )}
-
-              <div className="mt-8 pt-8 border-t border-white/5 flex flex-col gap-3">
-                  <div className="flex justify-between text-[10px] font-bold uppercase tracking-tighter">
-                      <span className="text-slate-400">Partida</span>
-                      <span className="text-white">{scanResult.partida}</span>
-                  </div>
-                  <div className="flex justify-between text-[10px] font-bold uppercase tracking-tighter">
-                      <span className="text-slate-400">Pérdida Calculada</span>
-                      <span className="text-[#D4AF37]">5% (NCh 170)</span>
-                  </div>
               </div>
 
-              <div className="mt-8 space-y-3">
-                  <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest text-center mb-2">Comparativa Real-Time Retail</p>
-                  <div className="grid grid-cols-3 gap-2">
-                      {[
-                        { name: 'Sodimac', logo: 'S', price: (costBreakdown?.total || 0) * 1.05 },
-                        { name: 'Easy', logo: 'E', price: (costBreakdown?.total || 0) * 1.08 },
-                        { name: 'Local', logo: 'L', price: (costBreakdown?.total || 0) * 0.98 }
-                      ].map(retail => (
-                        <div key={retail.name} className="bg-white/5 border border-white/10 p-3 rounded-xl flex flex-col items-center gap-1">
-                          <span className="text-[10px] font-black text-white">{retail.name}</span>
-                          <span className={`text-[11px] font-bold ${retail.name === 'Local' ? 'text-green-400' : 'text-slate-400'}`}>
-                            ${Math.round(retail.price).toLocaleString('es-CL')}
-                          </span>
-                        </div>
-                      ))}
-                  </div>
-              </div>
-
-              {scanResult.weather_risk && scanResult.weather_risk.status !== 'clear' && (
-                <div className={`mt-4 p-4 rounded-2xl border ${scanResult.weather_risk.status === 'danger' ? 'bg-red-500/20 border-red-500/50 animate-pulse' : 'bg-yellow-500/20 border-yellow-500/50'}`}>
-                   <div className="flex items-center gap-2 mb-1">
-                      <CloudLightning className={`w-5 h-5 ${scanResult.weather_risk.status === 'danger' ? 'text-red-400' : 'text-yellow-400'}`} />
-                      <p className={`text-xs font-black uppercase tracking-tighter ${scanResult.weather_risk.status === 'danger' ? 'text-red-400' : 'text-yellow-400'}`}>
-                        {scanResult.weather_risk.alert}
-                      </p>
-                   </div>
-                   <p className="text-[11px] text-white font-bold">{scanResult.weather_risk.recommendation}</p>
-                </div>
-              )}
-
-              {scanResult.dispute_analysis && scanResult.dispute_analysis.changes_detected && (
-                <div className="mt-4 p-4 bg-purple-500/10 border border-purple-500/30 rounded-2xl">
-                   <div className="flex items-center gap-2 mb-2">
-                      <Gavel className="w-4 h-4 text-purple-400" />
-                      <p className="text-[10px] font-black text-purple-400 uppercase tracking-widest">Mediador de Disputas IA</p>
-                   </div>
-                   <div className="space-y-2">
-                      <p className="text-[11px] text-slate-300"><strong>Cambios:</strong> {scanResult.dispute_analysis.changes_detected}</p>
-                      <p className="text-[11px] text-slate-300"><strong>Veredicto:</strong> <span className="text-white italic">{scanResult.dispute_analysis.mediator_verdict}</span></p>
-                   </div>
-                </div>
-              )}
-
-              <div className="mt-10 space-y-4">
-                {signature ? (
-                  <div className="flex flex-col items-center gap-2">
-                    <img src={signature} className="h-16 border-b border-white/20" alt="Firma" />
-                    <button onClick={() => setShowSignaturePad(true)} className="text-[10px] text-[#D4AF37] font-bold uppercase">Cambiar Firma</button>
-                  </div>
-                ) : (
-                  <Button 
-                    variant="outline"
-                    onClick={() => setShowSignaturePad(true)}
-                    className="w-full h-12 border-white/20 text-white font-bold rounded-2xl"
-                  >
-                    AÑADIR FIRMA DIGITAL
-                  </Button>
-                )}
+              <div className="mt-8 space-y-4">
+                <Button onClick={() => generateElitePDF(name, scanResult, costBreakdown, materials, signature)} className="w-full h-16 premium-button text-black font-black rounded-2xl text-md shadow-2xl">
+                  GENERAR REPORTE AEC ($2.990)
+                </Button>
                 
-                <div className="grid grid-cols-1 gap-3">
-                  <Button 
-                    onClick={handleDownload}
-                    disabled={isPaying && !isUnlocked}
-                    className={`w-full h-16 ${isUnlocked ? 'bg-green-500' : 'bg-[#D4AF37]'} text-black font-black rounded-2xl text-lg shadow-xl hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3`}
-                  >
-                    {isPaying && !isUnlocked ? (
-                      <>
-                        <Loader2 className="w-6 h-6 animate-spin" />
-                        PROCESANDO PAGO...
-                      </>
-                    ) : isUnlocked ? (
-                      <>
-                        <CheckCircle2 className="w-6 h-6" />
-                        REPORTE ELITE DESBLOQUEADO {isCEO ? '(CEO)' : ''}
-                      </>
-                    ) : (
-                      <>
-                        <CreditCard className="w-6 h-6" />
-                        DESCARGAR REPORTE ELITE
-                      </>
-                    )}
+                <div className="grid grid-cols-2 gap-3">
+                  <Button variant="outline" onClick={handleWhatsAppShare} className="h-16 border-green-500/20 text-green-400 font-black rounded-2xl flex items-center justify-center gap-3">
+                    <MessageSquare className="w-5 h-5" /> WHATSAPP
                   </Button>
-
-                  {isUnlocked && (
-                    <div className="grid grid-cols-2 gap-3">
-                      <Button 
-                        variant="outline"
-                        onClick={() => {
-                          const worksheet = XLSX.utils.json_to_sheet(materials.map((m, i) => ({
-                            "Ítem": `1.${i+1}`,
-                            "Descripción": m.nombre,
-                            "Cantidad": m.cantidad.toFixed(2),
-                            "Unidad": m.unidad,
-                            "Costo Total Estimado": Math.round(m.costo)
-                          })));
-                          const workbook = XLSX.utils.book_new();
-                          XLSX.utils.book_append_sheet(workbook, worksheet, "Materiales");
-                          XLSX.writeFile(workbook, `ObraGo_Presupuesto_${name || 'Scan'}.xlsx`);
-                        }}
-                        className="h-14 border-green-500/30 text-green-400 font-bold rounded-2xl flex items-center justify-center gap-2 text-xs hover:bg-green-500/10"
-                      >
-                        <Download className="w-4 h-4" />
-                        EXCEL
-                      </Button>
-
-                      <Button 
-                        variant="outline"
-                        onClick={() => generateSumaAlzadaContract(name, costBreakdown, materials)}
-                        className="h-14 border-blue-500/30 text-blue-400 font-bold rounded-2xl flex items-center justify-center gap-2 text-xs hover:bg-blue-500/10"
-                      >
-                        <FileText className="w-4 h-4" />
-                        CONTRATO
-                      </Button>
-                    </div>
-                  )}
-
-                  <Button 
-                    variant="outline"
-                    onClick={() => setShowAR(true)}
-                    className="w-full h-16 border-[#D4AF37]/30 text-[#D4AF37] font-black rounded-2xl flex items-center justify-center gap-3 hover:bg-[#D4AF37]/10"
-                  >
-                    <Box className="w-6 h-6" />
-                    PROYECTAR AR (AS-BUILT)
+                  <Button variant="outline" onClick={() => setShowAR(true)} className="h-16 border-white/10 text-white font-black rounded-2xl flex items-center justify-center gap-3">
+                    <Box className="w-6 h-6" /> VER EN AR
                   </Button>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <Button 
-                      variant="outline"
-                      onClick={() => {
-                        const msg = encodeURIComponent(`¡Hola! Acabo de calcular un presupuesto de $${Math.round(costBreakdown.total * 1.19).toLocaleString('es-CL')} para mi proyecto ${name} usando Obra Go. Mira el análisis aquí: ${window.location.href}`);
-                        window.open(`https://wa.me/?text=${msg}`, '_blank');
-                      }}
-                      className="h-14 border-white/10 text-white font-bold rounded-2xl flex items-center justify-center gap-2 text-xs"
-                    >
-                      <Share2 className="w-4 h-4" />
-                      WHATSAPP
-                    </Button>
-                    <Button 
-                      variant="outline"
-                      onClick={() => alert("Iniciando Proyección en Realidad Aumentada (Beta). Por favor, apunte su cámara al suelo.")}
-                      className="h-14 border-white/10 text-white font-bold rounded-2xl flex items-center justify-center gap-2 text-xs"
-                    >
-                      <Zap className="w-4 h-4" />
-                      VER EN AR
-                    </Button>
-                  </div>
                 </div>
-
-                <p className="text-[9px] text-gray-600 mt-4 uppercase font-black tracking-widest">
-                   {isUnlocked ? '🔓 Ingeniería AEC Activada' : '🔐 Pago Seguro via Mercado Pago Chile'}
-                </p>
               </div>
             </div>
           </div>
         )}
       </main>
 
-      {/* Signature Pad Modal */}
       {showSignaturePad && (
-        <div className="fixed inset-0 z-[1000] bg-black/90 backdrop-blur-xl flex flex-col p-6 items-center justify-center">
-          <div className="w-full max-w-sm space-y-8">
-            <div className="text-center">
-              <h3 className="text-2xl font-black text-[#D4AF37] italic uppercase tracking-tighter">Firma Digital</h3>
-              <p className="text-[10px] text-slate-500 font-bold uppercase mt-2">Dibuja tu firma en el recuadro</p>
-            </div>
-            
-            <div className="bg-white/5 border border-white/10 rounded-[32px] overflow-hidden">
-              <canvas 
-                ref={canvasRef}
-                width={350}
-                height={200}
-                className="w-full h-full touch-none"
-                onMouseDown={startDrawing}
-                onMouseMove={draw}
-                onMouseUp={stopDrawing}
-                onMouseLeave={stopDrawing}
-                onTouchStart={startDrawing}
-                onTouchMove={draw}
-                onTouchEnd={stopDrawing}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <Button variant="outline" onClick={clearSignature} className="h-14 rounded-2xl font-black uppercase text-xs border-white/10">Limpiar</Button>
-              <Button onClick={saveSignature} className="h-14 bg-[#D4AF37] text-black rounded-2xl font-black uppercase text-xs">Guardar Firma</Button>
-            </div>
-            <Button variant="ghost" onClick={() => setShowSignaturePad(false)} className="w-full text-[10px] text-slate-500 font-bold uppercase">Cancelar</Button>
-          </div>
+        <div className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-xl flex flex-col p-8 items-center justify-center">
+           <div className="w-full max-w-sm space-y-8">
+              <h3 className="text-2xl font-black gold-gradient-text text-center uppercase italic">Firma de Ingeniería</h3>
+              <div className="bg-white/5 border border-white/10 rounded-[40px] overflow-hidden aspect-video">
+                <canvas ref={canvasRef} className="w-full h-full" onMouseDown={startDrawing} onMouseMove={draw} onMouseUp={() => setIsDrawing(false)} onTouchStart={startDrawing} onTouchMove={draw} onTouchEnd={() => setIsDrawing(false)} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <Button variant="outline" onClick={() => canvasRef.current.getContext('2d').clearRect(0,0,350,200)} className="h-14 rounded-2xl border-white/10 font-black uppercase text-xs">Limpiar</Button>
+                <Button onClick={saveSignature} className="h-14 premium-button text-black rounded-2xl font-black uppercase text-xs">Confirmar</Button>
+              </div>
+           </div>
         </div>
       )}
 
-      <footer className="p-8 text-center border-t border-white/5 bg-black/20">
-        <p className="text-[9px] text-gray-700 font-black uppercase tracking-[0.4em]">Obra Go Pro v9.5 Deployment</p>
-      </footer>
+      {showAR && <AROverlay scanResult={scanResult} onClose={() => setShowAR(false)} />}
       <VoiceAssistant context={scanResult} />
       
-      {showAR && (
-        <AROverlay 
-          scanResult={scanResult}
-          onClose={() => setShowAR(false)} 
-        />
-      )}
+      <footer className="p-8 text-center border-t border-white/5 opacity-30">
+        <p className="text-[8px] font-black uppercase tracking-[0.5em]">Obra Go Senior v21.1 AEC-CHILE MASTER</p>
+      </footer>
     </div>
   );
 }
-
-
