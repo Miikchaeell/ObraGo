@@ -72,6 +72,11 @@ const generateElitePDF = async (projectName, scanResult, costBreakdown, material
       doc.text("FIRMA RESPONSABLE AEC", 15, 268);
     }
 
+    // DISCLAIMER LEGAL V21.2
+    doc.setFontSize(7);
+    doc.setTextColor(150, 150, 150);
+    doc.text("DESCARGO DE RESPONSABILIDAD: Este reporte es una estimación técnica basada en parámetros AEC-CHILE. Los precios referenciales tienen una validez de 5 días hábiles desde su emisión.", 105, 285, { align: "center", maxWidth: 180 });
+
     doc.save(`Reporte_Elite_AEC_${projectName || 'Obra'}.pdf`);
   } catch (e) { console.error(e); }
 };
@@ -239,9 +244,15 @@ export default function Scanner() {
               </div>
 
               <div className="mt-8 space-y-4">
-                <Button onClick={() => generateElitePDF(name, scanResult, costBreakdown, materials, signature)} className="w-full h-16 premium-button text-black font-black rounded-2xl text-md shadow-2xl">
-                  GENERAR REPORTE AEC ($2.990)
-                </Button>
+                {isUnlocked ? (
+                  <Button onClick={() => generateElitePDF(name, scanResult, costBreakdown, materials, signature)} className="w-full h-16 premium-button text-black font-black rounded-2xl text-md shadow-2xl">
+                    DESCARGAR REPORTE AEC ELITE
+                  </Button>
+                ) : (
+                  <Button onClick={() => alert('🔒 Transacción Protegida: El pago de $2.990 no ha sido procesado por Mercado Pago.')} className="w-full h-16 bg-slate-800 text-slate-400 font-black rounded-2xl text-md shadow-2xl">
+                    GENERAR REPORTE AEC ($2.990) - BLOQUEADO
+                  </Button>
+                )}
                 
                 <div className="grid grid-cols-2 gap-3">
                   <Button variant="outline" onClick={handleWhatsAppShare} className="h-16 border-green-500/20 text-green-400 font-black rounded-2xl flex items-center justify-center gap-3">

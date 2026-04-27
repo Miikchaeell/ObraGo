@@ -513,12 +513,13 @@ app.post('/api/chat/support', upload.single('image'), async (req, res) => {
         1. Si el usuario sube una imagen o menciona un "Baño" o "Zona Húmeda", DEBES recomendar OBLIGATORIAMENTE el uso de "Volcanita RH (Verde)" y "Adhesivo Bekron AC (Alta Adherencia)". Es innegociable.
         2. Si el proyecto está en la Zona Sur de Chile o es una zona lluviosa, DEBES recomendar aumentar la pendiente de la techumbre e instalar canales de recolección de aguas lluvias adecuados.
         3. Factores de Pérdida: Usa siempre 5% de pérdida para Hormigón y Acero, y 15% para Techumbres y Madera. Menciónalo si te preguntan por cálculos.
+        4. VALIDACIÓN AEC (LÍMITES DE INGENIERÍA): El espesor de un radier no puede ser menor a 7cm ni mayor a 20cm. Si el usuario ingresa una medida fuera de rango, DEBES decir exactamente: "Esa medida no cumple con estándares de seguridad, ¿estás seguro?".
         
         REGLAS COMERCIALES Y DE TONO:
-        4. Contexto de Obra: Tienes acceso al presupuesto dinámico del usuario, que actualmente es de $${Number(totalCost).toLocaleString('es-CL')} CLP.
-        5. Tono: Chileno, extremadamente profesional, socio de confianza. No eres una IA, eres un colega experto ("maestro", "jefe").
-        6. Venta: Si el usuario tiene dudas sobre cubicaciones exactas, dile que el Reporte Élite contiene el APU (Análisis de Precios Unitarios), rendimiento de mano de obra y la Cascada Comercial (CD + GG 12% + Utilidad 15% + IVA 19%).
-        7. Botón de Pago: Si detectas que el usuario está muy confundido o pide el desglose total, incluye la palabra clave [SHOW_PAYMENT_BUTTON] en tu respuesta.`;
+        5. Contexto de Obra: Tienes acceso al presupuesto dinámico del usuario, que actualmente es de $${Number(totalCost).toLocaleString('es-CL')} CLP.
+        6. Tono: Chileno, extremadamente profesional, socio de confianza. No eres una IA, eres un colega experto ("maestro", "jefe").
+        7. Venta: Si el usuario tiene dudas sobre cubicaciones exactas, dile que el Reporte Élite contiene el APU (Análisis de Precios Unitarios), rendimiento de mano de obra y la Cascada Comercial (CD + GG 12% + Utilidad 15% + IVA 19%).
+        8. Botón de Pago: Si detectas que el usuario está muy confundido o pide el desglose total, incluye la palabra clave [SHOW_PAYMENT_BUTTON] en tu respuesta.`;
 
         let chatHistory = [];
         if (history) {
@@ -1019,6 +1020,30 @@ app.post('/api/analyze', authenticateToken, upload.array('images', 10), async (r
       const hashContent = JSON.stringify(parsedData) + requestId + req.files[0].filename;
       const blockchainHash = CryptoJS.SHA256(hashContent).toString();
       
+      // [v21.2] BACKUP DE CONSULTAS PARA AUDITORÍA
+      try {
+        const logsDir = path.join(__dirname, '../logs');
+        if (!fs.existsSync(logsDir)) fs.mkdirSync(logsDir, { recursive: true });
+        const auditLogPath = path.join(logsDir, 'audit_log.json');
+        
+        let auditLogs = [];
+        if (fs.existsSync(auditLogPath)) {
+          auditLogs = JSON.parse(fs.readFileSync(auditLogPath, 'utf8'));
+        }
+        
+        auditLogs.push({
+          timestamp: new Date().toISOString(),
+          requestId,
+          userId: req.user?.id || 'unknown',
+          data: parsedData
+        });
+        
+        fs.writeFileSync(auditLogPath, JSON.stringify(auditLogs, null, 2));
+        console.log(`✅ [ID:${requestId}] Backup de auditoría guardado en logs/audit_log.json.`);
+      } catch (logError) {
+        console.error(`⚠️ [ID:${requestId}] Error guardando backup de auditoría:`, logError.message);
+      }
+
       res.json({ 
         success: true, 
         data: parsedData, 

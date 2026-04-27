@@ -118,3 +118,17 @@ export const calculateTotalCost = (
     volume
   };
 };
+
+export const validateAECBounds = (systemId: string | null, dims: Dimensions): string[] => {
+  const warnings: string[] = [];
+  if (!systemId) return warnings;
+
+  // Límite de ingeniería para radier
+  if (systemId.includes('radier')) {
+    if (dims.espesor < 0.07 || dims.espesor > 0.20) {
+      warnings.push("Esa medida no cumple con estándares de seguridad, ¿estás seguro? (El espesor normativo es 7cm a 20cm)");
+    }
+  }
+
+  return warnings;
+};
