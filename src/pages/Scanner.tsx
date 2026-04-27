@@ -2,17 +2,19 @@
 // @ts-nocheck
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
-import { ChevronLeft, RotateCcw, Camera, Loader2, CheckCircle2, Mic, CreditCard, Share2, Zap } from "lucide-react";
+import { ChevronLeft, RotateCcw, Camera, Loader2, CheckCircle2, Mic, CreditCard, Share2, Zap, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { calculateMaterialQuantities, calculateTotalCost } from "@/services/calculator";
+import { useAuth } from "@/context/AuthContext";
+import * as XLSX from 'xlsx';
 
 /**
  * MOTOR DE INGENIERÍA AEC OBRA GO - V9.5
  * REINGENIERÍA DE PRODUCCIÓN: DESBLOQUEO TOTAL - SIN PAYWALLS
  */
-const generateElitePDF = (projectName, scanData, costData, materials, userSignature, voiceNotes) => {
+const generateElitePDF = (projectName, scanData, costData, materials, userSignature, voiceNotes, gpsCoords) => {
   try {
     const doc = new jsPDF();
     const primaryColor = [212, 175, 55]; // Gold #D4AF37
@@ -95,7 +97,7 @@ const generateElitePDF = (projectName, scanData, costData, materials, userSignat
       doc.text("FIRMA DEL RESPONSABLE EN TERRENO", 15, userY + 25);
       doc.setFont("helvetica", "normal");
       doc.text(`Fecha: ${new Date().toLocaleString()}`, 15, userY + 30);
-      doc.text(`Validación GPS: San Fernando, Chile`, 15, userY + 35);
+      doc.text(`Validación GPS: ${gpsCoords ? `${gpsCoords.latitude}, ${gpsCoords.longitude}` : 'San Fernando, Chile'}`, 15, userY + 35);
     }
 
     // Firma Digital de Michael
@@ -115,9 +117,15 @@ const generateElitePDF = (projectName, scanData, costData, materials, userSignat
 };
 
 export default function Scanner() {
+  const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
+
+  // Cuenta Maestra CEO
+  const isCEO = user?.email === 'michael.seura.delgado@gmail.com' || user?.phone === '+56912345678';
+  const isUnlocked = isCEO || searchParams.get('status') === 'approved';
+
   const [step, setStep] = useState('config');
   const [name, setName] = useState('');
   const [region, setRegion] = useState('');
@@ -151,9 +159,20 @@ export default function Scanner() {
         setStep('result');
         
         // Disparar descarga automática después de un breve delay
-        setTimeout(() => {
-          generateElitePDF(parsed.name, parsed.scanResult, parsed.costBreakdown, parsed.materials, parsed.signature, parsed.voiceNotes);
-        }, 1500);
+        // Capturar GPS antes de generar PDF
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              const coords = { latitude: position.coords.latitude, longitude: position.coords.longitude };
+              generateElitePDF(parsed.name, parsed.scanResult, parsed.costBreakdown, parsed.materials, parsed.signature, parsed.voiceNotes, coords);
+            },
+            () => {
+              generateElitePDF(parsed.name, parsed.scanResult, parsed.costBreakdown, parsed.materials, parsed.signature, parsed.voiceNotes, null);
+            }
+          );
+        } else {
+          generateElitePDF(parsed.name, parsed.scanResult, parsed.costBreakdown, parsed.materials, parsed.signature, parsed.voiceNotes, null);
+        }
       }
     }
   }, [searchParams]);
@@ -302,9 +321,7 @@ export default function Scanner() {
   };
 
   const handleDownload = async () => {
-    const status = searchParams.get('status');
-    
-    if (status !== 'approved') {
+    if (!isUnlocked) {
       setIsPaying(true);
       try {
         // Persistir datos para recuperarlos al volver del checkout
@@ -341,7 +358,19 @@ export default function Scanner() {
       return;
     }
 
-    generateElitePDF(name, scanResult, costBreakdown, materials, signature, voiceNotes);
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const coords = { latitude: position.coords.latitude, longitude: position.coords.longitude };
+          generateElitePDF(name, scanResult, costBreakdown, materials, signature, voiceNotes, coords);
+        },
+        () => {
+          generateElitePDF(name, scanResult, costBreakdown, materials, signature, voiceNotes, null);
+        }
+      );
+    } else {
+      generateElitePDF(name, scanResult, costBreakdown, materials, signature, voiceNotes, null);
+    }
   };
 
   return (
@@ -478,18 +507,18 @@ export default function Scanner() {
                 <div className="grid grid-cols-1 gap-3">
                   <Button 
                     onClick={handleDownload}
-                    disabled={isPaying}
-                    className={`w-full h-16 ${searchParams.get('status') === 'approved' ? 'bg-green-500' : 'bg-[#D4AF37]'} text-black font-black rounded-2xl text-lg shadow-xl hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3`}
+                    disabled={isPaying && !isUnlocked}
+                    className={`w-full h-16 ${isUnlocked ? 'bg-green-500' : 'bg-[#D4AF37]'} text-black font-black rounded-2xl text-lg shadow-xl hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3`}
                   >
-                    {isPaying ? (
+                    {isPaying && !isUnlocked ? (
                       <>
                         <Loader2 className="w-6 h-6 animate-spin" />
                         PROCESANDO PAGO...
                       </>
-                    ) : searchParams.get('status') === 'approved' ? (
+                    ) : isUnlocked ? (
                       <>
                         <CheckCircle2 className="w-6 h-6" />
-                        REPORTE ELITE DESBLOQUEADO
+                        REPORTE ELITE DESBLOQUEADO {isCEO ? '(CEO)' : ''}
                       </>
                     ) : (
                       <>
@@ -498,6 +527,28 @@ export default function Scanner() {
                       </>
                     )}
                   </Button>
+
+                  {isUnlocked && (
+                    <Button 
+                      variant="outline"
+                      onClick={() => {
+                        const worksheet = XLSX.utils.json_to_sheet(materials.map((m, i) => ({
+                          "Ítem": `1.${i+1}`,
+                          "Descripción": m.nombre,
+                          "Cantidad": m.cantidad.toFixed(2),
+                          "Unidad": m.unidad,
+                          "Costo Total Estimado": Math.round(m.costo)
+                        })));
+                        const workbook = XLSX.utils.book_new();
+                        XLSX.utils.book_append_sheet(workbook, worksheet, "Materiales");
+                        XLSX.writeFile(workbook, `ObraGo_Presupuesto_${name || 'Scan'}.xlsx`);
+                      }}
+                      className="w-full h-14 border-green-500/30 text-green-400 font-bold rounded-2xl flex items-center justify-center gap-2 text-sm hover:bg-green-500/10"
+                    >
+                      <Download className="w-5 h-5" />
+                      EXPORTAR A EXCEL (.XLSX)
+                    </Button>
+                  )}
 
                   <div className="grid grid-cols-2 gap-3">
                     <Button 
@@ -523,7 +574,7 @@ export default function Scanner() {
                 </div>
 
                 <p className="text-[9px] text-gray-600 mt-4 uppercase font-black tracking-widest">
-                   {searchParams.get('status') === 'approved' ? '🔓 Ingeniería AEC Activada' : '🔐 Pago Seguro via Mercado Pago Chile'}
+                   {isUnlocked ? '🔓 Ingeniería AEC Activada' : '🔐 Pago Seguro via Mercado Pago Chile'}
                 </p>
               </div>
             </div>
