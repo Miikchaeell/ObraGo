@@ -856,6 +856,12 @@ app.post('/api/analyze', authenticateToken, upload.array('images', 10), async (r
             sistema_id: "radier_estandar",
             dimensiones: { largo: 8.5, ancho: 4.2, espesor: 0.12, alto: 0 },
             confianza: 0.98,
+            safety_analysis: {
+              status: "safe",
+              ppe_found: ["casco", "chaleco", "guantes"],
+              risks_detected: [],
+              recommendation: "Zona segura. Mantener orden y limpieza."
+            },
             calidad_analisis: { iluminacion: "buena", enfoque: "nitido", advertencia: "MODO MOCK" },
             alternativas: ["tabique_st"],
             recomendacion_cuadrilla: "1 Maestro + 2 Ayudantes",
@@ -884,14 +890,15 @@ app.post('/api/analyze', authenticateToken, upload.array('images', 10), async (r
         };
       });
 
-      const systemPrompt = `Eres un Ingeniero Civil de Terreno experto en Obra Go y analista de planos. 
+      const systemPrompt = `Eres un Ingeniero Civil de Terreno experto en Obra Go, analista de planos y Prevencionista de Riesgos. 
       Analiza estas fotografías o planos de obra e identifica partidas como: Radieres, Cierros, Excavaciones, Muros o Estructuras de Techumbre.
       
       ESTRATEGIA DE ANÁLISIS:
       1. Si es un plano 2D, extrae las áreas, ejes y perímetros para estimar las dimensiones (Largo, Ancho, Espesor).
       2. Si son fotos reales, fusiona el contexto de todas las fotos para encontrar la partida dominante.
-      3. No devuelvas valores genéricos si puedes aproximar la realidad.
-      4. Devuelve un JSON estricto con dimensiones en metros.
+      3. AUDITORÍA DE SEGURIDAD (PRP): Analiza si los trabajadores (si hay) usan casco, chaleco y zapatos de seguridad. Identifica riesgos como excavaciones sin protección o andamios inestables.
+      4. No devuelvas valores genéricos si puedes aproximar la realidad.
+      5. Devuelve un JSON estricto con dimensiones en metros y el análisis de seguridad.
       
       Si la imagen es muy borrosa o difícil de analizar, devuelve un "ESTIMADO CONSERVADOR" basado en un radier estándar de 6x3m y notifica en observaciones.
 
@@ -903,6 +910,12 @@ app.post('/api/analyze', authenticateToken, upload.array('images', 10), async (r
         "subtipo": "Descripción detallada",
         "sistema_id": "ID_DEL_CATALOGO",
         "dimensiones": { "largo": X, "ancho": Y, "espesor": Z, "alto": W },
+        "safety_analysis": {
+           "status": "safe" | "warning" | "danger",
+           "ppe_found": ["casco", "chaleco", ...],
+           "risks_detected": ["excavacion_sin_entibar", ...],
+           "recommendation": "..."
+        },
         "confianza": 0.XX,
         "is_fallback": boolean,
         "observaciones": "..."
@@ -938,6 +951,12 @@ app.post('/api/analyze', authenticateToken, upload.array('images', 10), async (r
         partida: "Radier (Estimado Conservador)",
         subtipo: "Escaneo difícil - Ajuste Manual Sugerido",
         dimensiones: { largo: 6, ancho: 3, espesor: 0.12, alto: 0 },
+        safety_analysis: {
+          status: "warning",
+          ppe_found: ["desconocido"],
+          risks_detected: ["visibilidad_baja"],
+          recommendation: "Realizar inspección visual manual por baja visibilidad."
+        },
         confidence: 0.3,
         is_fallback: true,
         observaciones: "Imagen difícil de leer. Se sugiere ajustar dimensiones manualmente."

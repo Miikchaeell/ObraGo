@@ -2,7 +2,7 @@
 // @ts-nocheck
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
-import { ChevronLeft, RotateCcw, Camera, Loader2, CheckCircle2, Mic, CreditCard, Share2, Zap, Download, FileText } from "lucide-react";
+import { ChevronLeft, RotateCcw, Camera, Loader2, CheckCircle2, Mic, CreditCard, Share2, Zap, Download, FileText, ShieldAlert, ShieldCheck, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -513,6 +513,23 @@ export default function Scanner() {
                 </div>
               )}
 
+              {scanResult.safety_analysis && (
+                <div className={`mt-4 p-4 rounded-2xl border ${scanResult.safety_analysis.status === 'safe' ? 'bg-green-500/10 border-green-500/30' : scanResult.safety_analysis.status === 'warning' ? 'bg-yellow-500/10 border-yellow-500/30' : 'bg-red-500/10 border-red-500/30'}`}>
+                   <div className="flex items-center gap-2 mb-2">
+                      {scanResult.safety_analysis.status === 'safe' ? <ShieldCheck className="w-4 h-4 text-green-400" /> : <ShieldAlert className="w-4 h-4 text-red-400" />}
+                      <p className={`text-[10px] font-black uppercase tracking-widest ${scanResult.safety_analysis.status === 'safe' ? 'text-green-400' : 'text-red-400'}`}>
+                        Auditoría de Seguridad: {scanResult.safety_analysis.status === 'safe' ? 'CUMPLE' : 'RIESGO DETECTADO'}
+                      </p>
+                   </div>
+                   <p className="text-[11px] text-slate-200 mb-2">{scanResult.safety_analysis.recommendation}</p>
+                   <div className="flex flex-wrap gap-2">
+                      {scanResult.safety_analysis.ppe_found?.map(ppe => (
+                        <span key={ppe} className="px-2 py-0.5 bg-white/5 rounded-full text-[8px] font-bold text-slate-400 uppercase">✓ {ppe}</span>
+                      ))}
+                   </div>
+                </div>
+              )}
+
               <div className="mt-8 pt-8 border-t border-white/5 flex flex-col gap-3">
                   <div className="flex justify-between text-[10px] font-bold uppercase tracking-tighter">
                       <span className="text-slate-400">Partida</span>
@@ -521,6 +538,24 @@ export default function Scanner() {
                   <div className="flex justify-between text-[10px] font-bold uppercase tracking-tighter">
                       <span className="text-slate-400">Pérdida Calculada</span>
                       <span className="text-[#D4AF37]">5% (NCh 170)</span>
+                  </div>
+              </div>
+
+              <div className="mt-8 space-y-3">
+                  <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest text-center mb-2">Comparativa Real-Time Retail</p>
+                  <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { name: 'Sodimac', logo: 'S', price: costBreakdown.total * 1.05 },
+                        { name: 'Easy', logo: 'E', price: costBreakdown.total * 1.08 },
+                        { name: 'Local', logo: 'L', price: costBreakdown.total * 0.98 }
+                      ].map(retail => (
+                        <div key={retail.name} className="bg-white/5 border border-white/10 p-3 rounded-xl flex flex-col items-center gap-1">
+                          <span className="text-[10px] font-black text-white">{retail.name}</span>
+                          <span className={`text-[11px] font-bold ${retail.name === 'Local' ? 'text-green-400' : 'text-slate-400'}`}>
+                            ${Math.round(retail.price).toLocaleString('es-CL')}
+                          </span>
+                        </div>
+                      ))}
                   </div>
               </div>
 
