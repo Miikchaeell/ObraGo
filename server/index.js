@@ -453,6 +453,40 @@ app.delete('/api/projects/:id', authenticateToken, async (req, res) => {
     }
 });
 
+// [v13.0] COPILOTO NORMATIVO POR VOZ (ENGINEER ASSISTANT)
+app.post('/api/voice-assistant', authenticateToken, async (req, res) => {
+    const { question, context } = req.body;
+    const hasGemini = !!process.env.GOOGLE_API_KEY;
+
+    if (!hasGemini) return res.status(500).json({ error: "Gemini not configured" });
+
+    try {
+        const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+        const systemPrompt = `Eres el Copiloto Normativo de ObraGo. Tu nombre es Michael (IA).
+        Eres un Ingeniero Civil Senior experto en Normativa Chilena (NCh 430, NCh 170, NCh 433, etc.).
+        
+        INSTRUCCIONES:
+        1. Responde de forma verbal, directa y técnica pero fácil de entender en el ruido de una obra.
+        2. Mantén la respuesta en menos de 40 palabras para que el TTS (Text-to-Speech) sea fluido.
+        3. Usa términos chilenos técnicos (fierro, radier, machón, cadena, solerilla).
+        4. Si no sabes la respuesta exacta, da una recomendación conservadora de ingeniería.
+        5. Tono: Colega experto, confiable, rápido.`;
+
+        const result = await model.generateContent([
+            systemPrompt,
+            `El usuario está en terreno y pregunta: "${question}". Contexto de la obra: ${JSON.stringify(context)}`
+        ]);
+
+        const responseText = result.response.text();
+        res.json({ success: true, answer: responseText });
+    } catch (error) {
+        console.error("Voice Assistant Error:", error);
+        res.status(500).json({ error: "Error consultando al ingeniero" });
+    }
+});
+
 // [v21.0] GOOGLE GEMINI 1.5 FLASH - CEREBRO AEC
 app.post('/api/chat/support', upload.single('image'), async (req, res) => {
     const { message, history, metadata } = req.body;

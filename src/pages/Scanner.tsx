@@ -11,6 +11,7 @@ import { useAuth } from "@/context/AuthContext";
 import * as XLSX from 'xlsx';
 import imageCompression from 'browser-image-compression';
 import { generateSumaAlzadaContract } from "@/services/contractGenerator";
+import VoiceAssistant from "@/components/VoiceAssistant";
 
 /**
  * MOTOR DE INGENIERÍA AEC OBRA GO - V9.5
@@ -701,6 +702,7 @@ export default function Scanner() {
       <footer className="p-8 text-center border-t border-white/5 bg-black/20">
         <p className="text-[9px] text-gray-700 font-black uppercase tracking-[0.4em]">Obra Go Pro v9.5 Deployment</p>
       </footer>
+      <VoiceAssistant context={scanResult} />
     </div>
   );
 }
