@@ -2,7 +2,7 @@
 // @ts-nocheck
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
-import { ChevronLeft, RotateCcw, Camera, Loader2, CheckCircle2, Mic, CreditCard, Share2, Zap, Download, FileText, ShieldAlert, ShieldCheck, ShoppingCart } from "lucide-react";
+import { ChevronLeft, RotateCcw, Camera, Loader2, CheckCircle2, Mic, CreditCard, Share2, Zap, Download, FileText, ShieldAlert, ShieldCheck, ShoppingCart, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -17,7 +17,7 @@ import VoiceAssistant from "@/components/VoiceAssistant";
  * MOTOR DE INGENIERÍA AEC OBRA GO - V9.5
  * REINGENIERÍA DE PRODUCCIÓN: DESBLOQUEO TOTAL - SIN PAYWALLS
  */
-const generateElitePDF = (projectName, scanData, costData, materials, userSignature, voiceNotes, gpsCoords) => {
+const generateElitePDF = (projectName, scanResult, costBreakdown, materials, userSignature, voiceNotes, gpsCoords, blockchainHash) => {
   try {
     const doc = new jsPDF();
     const primaryColor = [212, 175, 55]; // Gold #D4AF37
@@ -112,6 +112,13 @@ const generateElitePDF = (projectName, scanData, costData, materials, userSignat
     doc.text("Fundador e Ingeniero Senior Obra Go", 150, finalY + 14, { align: "center" });
     doc.text(`ID Validación: AEC-${Math.random().toString(36).substring(7).toUpperCase()}`, 150, finalY + 20, { align: "center" });
 
+    if (blockchainHash) {
+      doc.setFontSize(7);
+      doc.setTextColor(100, 100, 100);
+      doc.text(`HASH BLOCKCHAIN: ${blockchainHash}`, 105, 290, { align: "center" });
+      doc.text("Evidencia inmutable protegida por ObraGo Blockchain Ledger", 105, 293, { align: "center" });
+    }
+
     doc.save(`Reporte_Elite_ObraGo_${projectName || 'Scan'}.pdf`);
   } catch (error) {
     console.error("PDF Fail:", error);
@@ -142,6 +149,7 @@ export default function Scanner() {
   const [showSignaturePad, setShowSignaturePad] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [voiceNotes, setVoiceNotes] = useState('');
+  const [blockchainHash, setBlockchainHash] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -293,6 +301,9 @@ export default function Scanner() {
 
       const result = await response.json();
       const scanData = result.data;
+      if (result.blockchain_hash) {
+        setBlockchainHash(result.blockchain_hash);
+      }
 
       // Calcular costos usando el motor de ingeniería (Waste Margin 5%)
       const calculatedMaterials = calculateMaterialQuantities(
@@ -393,14 +404,14 @@ export default function Scanner() {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const coords = { latitude: position.coords.latitude, longitude: position.coords.longitude };
-          generateElitePDF(name, scanResult, costBreakdown, materials, signature, voiceNotes, coords);
+          generateElitePDF(name, scanResult, costBreakdown, materials, signature, voiceNotes, coords, blockchainHash);
         },
         () => {
-          generateElitePDF(name, scanResult, costBreakdown, materials, signature, voiceNotes, null);
+          generateElitePDF(name, scanResult, costBreakdown, materials, signature, voiceNotes, null, blockchainHash);
         }
       );
     } else {
-      generateElitePDF(name, scanResult, costBreakdown, materials, signature, voiceNotes, null);
+      generateElitePDF(name, scanResult, costBreakdown, materials, signature, voiceNotes, null, blockchainHash);
     }
   };
 
@@ -546,9 +557,9 @@ export default function Scanner() {
                   <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest text-center mb-2">Comparativa Real-Time Retail</p>
                   <div className="grid grid-cols-3 gap-2">
                       {[
-                        { name: 'Sodimac', logo: 'S', price: costBreakdown.total * 1.05 },
-                        { name: 'Easy', logo: 'E', price: costBreakdown.total * 1.08 },
-                        { name: 'Local', logo: 'L', price: costBreakdown.total * 0.98 }
+                        { name: 'Sodimac', logo: 'S', price: (costBreakdown?.total || 0) * 1.05 },
+                        { name: 'Easy', logo: 'E', price: (costBreakdown?.total || 0) * 1.08 },
+                        { name: 'Local', logo: 'L', price: (costBreakdown?.total || 0) * 0.98 }
                       ].map(retail => (
                         <div key={retail.name} className="bg-white/5 border border-white/10 p-3 rounded-xl flex flex-col items-center gap-1">
                           <span className="text-[10px] font-black text-white">{retail.name}</span>
@@ -559,6 +570,13 @@ export default function Scanner() {
                       ))}
                   </div>
               </div>
+
+              {blockchainHash && (
+                <div className="mt-6 flex items-center justify-center gap-2 bg-blue-500/10 border border-blue-500/20 py-2 rounded-xl">
+                   <Lock className="w-3 h-3 text-blue-400" />
+                   <p className="text-[8px] text-blue-400 font-black uppercase tracking-widest">Evidencia Protegida por Blockchain</p>
+                </div>
+              )}
 
               <div className="mt-10 space-y-4">
                 {signature ? (

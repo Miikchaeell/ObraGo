@@ -36,6 +36,7 @@ import Stripe from 'stripe';
 import cookieParser from 'cookie-parser';
 import { createPaymentPreference } from './services/payment.js';
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import CryptoJS from 'crypto-js';
 
 const isProduction = process.env.NODE_ENV === 'production';
 const hasEmailConfig = !!(process.env.EMAIL_USER && process.env.EMAIL_PASS);
@@ -967,7 +968,18 @@ app.post('/api/analyze', authenticateToken, upload.array('images', 10), async (r
       const parsedData = JSON.parse(cleanJson);
       
       console.log(`✅ [ID:${requestId}] Análisis IA Gemini exitoso.`);
-      res.json({ success: true, data: parsedData, imageUrl: `/uploads/${req.files[0].filename}` });
+      
+      // [v14.0] GENERACIÓN DE HASH BLOCKCHAIN
+      const hashContent = JSON.stringify(parsedData) + requestId + req.files[0].filename;
+      const blockchainHash = CryptoJS.SHA256(hashContent).toString();
+      
+      res.json({ 
+        success: true, 
+        data: parsedData, 
+        imageUrl: `/uploads/${req.files[0].filename}`,
+        blockchain_hash: blockchainHash,
+        timestamp: new Date().toISOString()
+      });
 
     } catch (innerError) {
       console.error(`💥 [ID:${requestId}] DETALLE ERROR OPENAI:`);
