@@ -2,7 +2,7 @@
 // @ts-nocheck
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
-import { ChevronLeft, RotateCcw, Camera, Loader2, CheckCircle2, Mic, CreditCard, Share2, Zap, Download, FileText, ShieldAlert, ShieldCheck, ShoppingCart, Lock } from "lucide-react";
+import { ChevronLeft, RotateCcw, Camera, Loader2, CheckCircle2, Mic, CreditCard, Share2, Zap, Download, FileText, ShieldAlert, ShieldCheck, ShoppingCart, Lock, Leaf, Droplets, Recycle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -117,6 +117,43 @@ const generateElitePDF = (projectName, scanResult, costBreakdown, materials, use
       doc.setTextColor(100, 100, 100);
       doc.text(`HASH BLOCKCHAIN: ${blockchainHash}`, 105, 290, { align: "center" });
       doc.text("Evidencia inmutable protegida por ObraGo Blockchain Ledger", 105, 293, { align: "center" });
+    }
+
+    // [v15.0] ANEXO SUSTENTABLE
+    if (scanResult?.environmental_impact) {
+      doc.addPage();
+      doc.setFillColor(240, 248, 240); // Soft Green
+      doc.rect(0, 0, 210, 297, 'F');
+      
+      doc.setFontSize(22);
+      doc.setTextColor(34, 139, 34); // Forest Green
+      doc.text("CERTIFICADO DE SUSTENTABILIDAD", 105, 40, { align: "center" });
+      
+      doc.setFontSize(12);
+      doc.setTextColor(0, 0, 0);
+      doc.text("Análisis de Impacto Ambiental AEC - ObraGo V15.0", 105, 50, { align: "center" });
+      
+      autoTable(doc, {
+        startY: 70,
+        head: [['Indicador Ambiental', 'Valor Estimado', 'Unidad']],
+        body: [
+          ['Huella de Carbono (CO2)', scanResult.environmental_impact.co2_kg, 'kg CO2'],
+          ['Residuos Totales', scanResult.environmental_impact.waste_m3, 'm3'],
+          ['Eficiencia Hídrica', scanResult.environmental_impact.water_efficiency_liters, 'Litros'],
+          ['Puntuación Obra Verde', `${scanResult.environmental_impact.green_score} / 5`, 'Hojas']
+        ],
+        theme: 'striped',
+        headStyles: { fillColor: [34, 139, 34] }
+      });
+      
+      const finalEnvY = (doc as any).lastAutoTable.finalY + 20;
+      doc.setFontSize(14);
+      doc.text("PLAN DE GESTIÓN DE RESIDUOS (LEY REP):", 15, finalEnvY);
+      doc.setFontSize(10);
+      doc.text(scanResult.environmental_impact.cutting_optimization, 15, finalEnvY + 10, { maxWidth: 180 });
+      
+      doc.setFontSize(8);
+      doc.text("Este reporte certifica el compromiso de la obra con la reducción de impacto ambiental.", 105, 280, { align: "center" });
     }
 
     doc.save(`Reporte_Elite_ObraGo_${projectName || 'Scan'}.pdf`);
@@ -539,6 +576,46 @@ export default function Scanner() {
                         <span key={ppe} className="px-2 py-0.5 bg-white/5 rounded-full text-[8px] font-bold text-slate-400 uppercase">✓ {ppe}</span>
                       ))}
                    </div>
+                </div>
+              )}
+
+              {scanResult.environmental_impact && (
+                <div className="mt-4 p-5 bg-green-500/5 border border-green-500/20 rounded-[30px] space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Leaf className="w-5 h-5 text-green-400" />
+                    <h4 className="text-xs font-black text-green-400 uppercase tracking-widest">Impacto Ambiental Sustentable</h4>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="p-3 bg-white/5 rounded-2xl">
+                      <p className="text-[8px] text-slate-500 font-bold uppercase mb-1">Huella CO2</p>
+                      <p className="text-sm font-black text-white">{scanResult.environmental_impact.co2_kg} kg CO2</p>
+                    </div>
+                    <div className="p-3 bg-white/5 rounded-2xl">
+                      <p className="text-[8px] text-slate-500 font-bold uppercase mb-1">Residuos Estimados</p>
+                      <p className="text-sm font-black text-white">{scanResult.environmental_impact.waste_m3} m³</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Recycle className="w-3 h-3 text-green-400/70" />
+                      <p className="text-[9px] text-slate-400 font-bold uppercase">Plan de Gestión de Residuos</p>
+                    </div>
+                    <p className="text-[11px] text-slate-300 italic">{scanResult.environmental_impact.cutting_optimization}</p>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-green-500/10">
+                    <div className="flex items-center gap-2">
+                      <Droplets className="w-3 h-3 text-blue-400" />
+                      <span className="text-[9px] font-bold text-slate-400 uppercase">Consumo Agua: {scanResult.environmental_impact.water_efficiency_liters}L</span>
+                    </div>
+                    <div className="flex gap-1">
+                      {[...Array(5)].map((_, i) => (
+                        <Leaf key={i} className={`w-3 h-3 ${i < scanResult.environmental_impact.green_score ? 'text-green-400' : 'text-slate-700'}`} />
+                      ))}
+                    </div>
+                  </div>
                 </div>
               )}
 
