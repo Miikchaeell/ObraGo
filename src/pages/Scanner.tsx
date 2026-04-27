@@ -123,7 +123,7 @@ export default function Scanner() {
   const [searchParams] = useSearchParams();
 
   // Cuenta Maestra CEO
-  const isCEO = user?.email === 'michael.seura.delgado@gmail.com' || user?.phone === '+56912345678';
+  const isCEO = user?.email === 'michael.seura.delgado@gmail.com' || user?.phone === '+56969020506';
   const isUnlocked = isCEO || searchParams.get('status') === 'approved';
 
   const [step, setStep] = useState('config');

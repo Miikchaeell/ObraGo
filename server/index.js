@@ -112,7 +112,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'obra-super-secret-key';
 const MOCK_USER = {
   id: '00000000-0000-0000-0000-000000000000',
   email: 'michael.seura.delgado@gmail.com',
-  phone: '+56912345678',
+  phone: '+56969020506',
   password_hash: '$2a$10$89v8/pXnI.vS8/q3Y3Y3Y.u1I1I1I1I1I1I1I1I1I1I1I1I1I1I1I', // placeholder for 123456
   password_plain: '123456',
   role: 'admin',
