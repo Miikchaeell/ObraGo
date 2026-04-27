@@ -823,30 +823,32 @@ app.get('/api/auth/me', authenticateToken, async (req, res) => {
 });
 
 // ANALYZE (AUTHENTICATION ENABLED FOR PROXY SECURITY)
-app.post('/api/analyze', authenticateToken, upload.single('image'), async (req, res) => {
+app.post('/api/analyze', authenticateToken, upload.array('images', 10), async (req, res) => {
   const requestId = Date.now().toString().slice(-6);
   const mem = process.memoryUsage();
   console.log(`\n📥 [${new Date().toISOString()}] [ID:${requestId}] REQUEST RECIBIDO: /api/analyze`);
   console.log(`📊 [ID:${requestId}] MEMORY: RSS: ${(mem.rss / 1024 / 1024).toFixed(2)} MB, HEAP: ${(mem.heapUsed / 1024 / 1024).toFixed(2)} MB`);
   
   try {
-    if (!req.file) {
+    if (!req.files || req.files.length === 0) {
       console.warn(`⚠️ [ID:${requestId}] No se recibió imagen.`);
       return res.status(400).json({ success: false, error: 'No se recibió imagen en la solicitud multpart' });
     }
     
     // [v10.2] Verificación de persistencia en disco
-    if (!fs.existsSync(req.file.path)) {
-      throw new Error("Archivo no guardado en disco correctamente.");
-    }
+    req.files.forEach(f => {
+      if (!fs.existsSync(f.path)) {
+        throw new Error("Archivo no guardado en disco correctamente.");
+      }
+    });
 
-    console.log(`📂 [ID:${requestId}] Archivo: ${req.file.originalname} en ${req.file.path}`);
+    console.log(`📂 [ID:${requestId}] Archivos recibidos: ${req.files.length}`);
 
-    const hasOpenAI = !!process.env.OPENAI_API_KEY;
+    const hasGemini = !!process.env.GOOGLE_API_KEY;
     const forceMock = process.env.MOCK_AI === 'true';
 
     // MOCK AI PARA DESARROLLO SIN LLAVES
-    if (!isProduction && (!hasOpenAI || forceMock)) {
+    if (!isProduction && (!hasGemini || forceMock)) {
         console.log(`ℹ️ [ID:${requestId}] MOCK AI ACTIVADO.`);
         const mockData = {
             partida: "Radier Hormigón",
@@ -862,26 +864,36 @@ app.post('/api/analyze', authenticateToken, upload.single('image'), async (req, 
             sistema: "Hormigón H-20"
         };
         await new Promise(resolve => setTimeout(resolve, 1000));
-        return res.json({ success: true, data: mockData, imageUrl: `/uploads/${req.file.filename}` });
+        return res.json({ success: true, data: mockData, imageUrl: `/uploads/${req.files[0].filename}` });
     }
 
-    if (!hasOpenAI) throw new Error("OpenAI Key not configured");
+    if (!hasGemini) throw new Error("Google API Key not configured");
 
     try {
-      // Bloque Interno de LLamada a OpenAI para capturar errores de cuotas o API
-      console.log(`🧠 [ID:${requestId}] Consultando gpt-4o (Ingeniero Calculista NCh)...`);
-      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-      const base64Image = fs.readFileSync(req.file.path).toString('base64');
+      // Bloque Interno de LLamada a Gemini Flash
+      console.log(`🧠 [ID:${requestId}] Consultando gemini-1.5-flash (Ingeniero Calculista Multimodal)...`);
+      const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-      const systemPrompt = `Eres un Ingeniero Civil de Terreno experto en Obra Go. 
-      Analiza esta fotografía de terreno e identifica partidas como: Radieres, Cierros, Excavaciones o Muros.
+      const imageParts = req.files.map(f => {
+        return {
+          inlineData: {
+            data: fs.readFileSync(f.path).toString("base64"),
+            mimeType: f.mimetype
+          }
+        };
+      });
+
+      const systemPrompt = `Eres un Ingeniero Civil de Terreno experto en Obra Go y analista de planos. 
+      Analiza estas fotografías o planos de obra e identifica partidas como: Radieres, Cierros, Excavaciones, Muros o Estructuras de Techumbre.
       
       ESTRATEGIA DE ANÁLISIS:
-      1. Identifica elementos de referencia (pallets, herramientas, personas, ladrillos) para estimar dimensiones.
-      2. No devuelvas valores genéricos si puedes aproximar la realidad.
-      3. Devuelve un JSON estricto con dimensiones (Largo, Ancho, Espesor, Alto) en metros.
+      1. Si es un plano 2D, extrae las áreas, ejes y perímetros para estimar las dimensiones (Largo, Ancho, Espesor).
+      2. Si son fotos reales, fusiona el contexto de todas las fotos para encontrar la partida dominante.
+      3. No devuelvas valores genéricos si puedes aproximar la realidad.
+      4. Devuelve un JSON estricto con dimensiones en metros.
       
-      Si la imagen es borrosa o difícil de analizar, devuelve un "ESTIMADO CONSERVADOR" basado en un radier estándar de 6x3m y notifica en observaciones.
+      Si la imagen es muy borrosa o difícil de analizar, devuelve un "ESTIMADO CONSERVADOR" basado en un radier estándar de 6x3m y notifica en observaciones.
 
       IDS PERMITIDOS: [radier_estandar, tabique_st, cielo_falso_st, cie_prov_osb, techumbre_zinc, albañileria_ladrillo].
       
@@ -896,23 +908,19 @@ app.post('/api/analyze', authenticateToken, upload.single('image'), async (req, 
         "observaciones": "..."
       }`;
 
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: [
-            { type: "text", text: "Analiza técnicamente esta fotografía de Obra Go. Identifica la partida y cubica las dimensiones visibles." }, 
-            { type: "image_url", image_url: { url: `data:${req.file.mimetype};base64,${base64Image}` } }
-          ] }
-        ],
-        response_format: { type: "json_object" }
-      });
+      const result = await model.generateContent([
+        systemPrompt,
+        "Analiza técnicamente estas imágenes/planos. Identifica la partida y cubica las dimensiones visibles.",
+        ...imageParts
+      ]);
 
-      const rawContent = response.choices[0].message.content;
-      const parsedData = JSON.parse(rawContent);
+      const rawContent = result.response.text();
+      // Limpiar posibles backticks del JSON en Gemini
+      const cleanJson = rawContent.replace(/```json/g, '').replace(/```/g, '').trim();
+      const parsedData = JSON.parse(cleanJson);
       
-      console.log(`✅ [ID:${requestId}] Análisis IA exitoso.`);
-      res.json({ success: true, data: parsedData, imageUrl: `/uploads/${req.file.filename}` });
+      console.log(`✅ [ID:${requestId}] Análisis IA Gemini exitoso.`);
+      res.json({ success: true, data: parsedData, imageUrl: `/uploads/${req.files[0].filename}` });
 
     } catch (innerError) {
       console.error(`💥 [ID:${requestId}] DETALLE ERROR OPENAI:`);
@@ -935,7 +943,7 @@ app.post('/api/analyze', authenticateToken, upload.single('image'), async (req, 
         observaciones: "Imagen difícil de leer. Se sugiere ajustar dimensiones manualmente."
       };
 
-      const filename = req.file ? req.file.filename : 'fallback.png';
+      const filename = req.files && req.files.length > 0 ? req.files[0].filename : 'fallback.png';
       res.json({ success: true, data: fallbackData, imageUrl: `/uploads/${filename}`, isEmergencyFallback: true });
     }
 

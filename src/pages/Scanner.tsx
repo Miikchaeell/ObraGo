@@ -2,13 +2,15 @@
 // @ts-nocheck
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
-import { ChevronLeft, RotateCcw, Camera, Loader2, CheckCircle2, Mic, CreditCard, Share2, Zap, Download } from "lucide-react";
+import { ChevronLeft, RotateCcw, Camera, Loader2, CheckCircle2, Mic, CreditCard, Share2, Zap, Download, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { calculateMaterialQuantities, calculateTotalCost } from "@/services/calculator";
 import { useAuth } from "@/context/AuthContext";
 import * as XLSX from 'xlsx';
+import imageCompression from 'browser-image-compression';
+import { generateSumaAlzadaContract } from "@/services/contractGenerator";
 
 /**
  * MOTOR DE INGENIERÍA AEC OBRA GO - V9.5
@@ -239,14 +241,42 @@ export default function Scanner() {
   };
 
   const handleFileUpload = async (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
+    const files = Array.from(event.target.files);
+    if (!files || files.length === 0) return;
+
+    if (files.length > 10) {
+      alert("Puedes subir un máximo de 10 fotografías o planos a la vez.");
+      return;
+    }
 
     setIsLoading(true);
     setStep('loading');
 
     const formData = new FormData();
-    formData.append('image', file);
+    
+    // Configuración de compresión
+    const options = {
+      maxSizeMB: 1, // Reducimos a 1MB máximo por imagen para que 10 fotos no pesen más de 10MB
+      maxWidthOrHeight: 1280,
+      useWebWorker: true
+    };
+
+    // Comprimir todas las imágenes en paralelo
+    const compressedFiles = await Promise.all(
+      files.map(async (file) => {
+        try {
+          return await imageCompression(file as File, options);
+        } catch (e) {
+          console.error("Error comprimiendo, usando original", e);
+          return file; // Fallback al original
+        }
+      })
+    );
+
+    // Añadir al FormData
+    compressedFiles.forEach((file, index) => {
+      formData.append('images', file, `image_${index}.jpg`); // 'images' coincide con upload.array('images', 10)
+    });
 
     try {
       const token = localStorage.getItem("token");
@@ -423,9 +453,15 @@ export default function Scanner() {
 
         {step === 'scan' && (
           <div className="flex flex-col items-center gap-8">
-            <div onClick={() => fileInputRef.current?.click()} className="w-56 h-56 border-4 border-dashed border-[#D4AF37]/30 rounded-[60px] flex items-center justify-center cursor-pointer hover:bg-white/5 transition-all group relative">
-              <Camera className="w-16 h-16 text-[#D4AF37] group-hover:scale-110 transition-transform" />
-              <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileUpload} accept="image/*" />
+            <div onClick={() => fileInputRef.current?.click()} className="w-56 h-56 border-4 border-dashed border-[#D4AF37]/30 rounded-[60px] flex flex-col items-center justify-center cursor-pointer hover:bg-white/5 transition-all group relative">
+              <Camera className="w-16 h-16 text-[#D4AF37] group-hover:scale-110 transition-transform mb-2" />
+              <span className="text-[#D4AF37]/70 font-bold text-xs text-center px-4">Subir hasta 10 fotos<br/>o planos 2D</span>
+              <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileUpload} accept="image/*,application/pdf" multiple />
+            </div>
+            
+            <div className="text-center space-y-2 mt-4">
+              <h3 className="text-2xl font-black italic tracking-tighter text-[#D4AF37]">Captura la Faena</h3>
+              <p className="text-sm text-[#D4AF37]/70">El Cerebro IA fusionará las imágenes</p>
             </div>
             
             <div className="flex flex-col items-center gap-4">
@@ -529,25 +565,36 @@ export default function Scanner() {
                   </Button>
 
                   {isUnlocked && (
-                    <Button 
-                      variant="outline"
-                      onClick={() => {
-                        const worksheet = XLSX.utils.json_to_sheet(materials.map((m, i) => ({
-                          "Ítem": `1.${i+1}`,
-                          "Descripción": m.nombre,
-                          "Cantidad": m.cantidad.toFixed(2),
-                          "Unidad": m.unidad,
-                          "Costo Total Estimado": Math.round(m.costo)
-                        })));
-                        const workbook = XLSX.utils.book_new();
-                        XLSX.utils.book_append_sheet(workbook, worksheet, "Materiales");
-                        XLSX.writeFile(workbook, `ObraGo_Presupuesto_${name || 'Scan'}.xlsx`);
-                      }}
-                      className="w-full h-14 border-green-500/30 text-green-400 font-bold rounded-2xl flex items-center justify-center gap-2 text-sm hover:bg-green-500/10"
-                    >
-                      <Download className="w-5 h-5" />
-                      EXPORTAR A EXCEL (.XLSX)
-                    </Button>
+                    <div className="grid grid-cols-2 gap-3">
+                      <Button 
+                        variant="outline"
+                        onClick={() => {
+                          const worksheet = XLSX.utils.json_to_sheet(materials.map((m, i) => ({
+                            "Ítem": `1.${i+1}`,
+                            "Descripción": m.nombre,
+                            "Cantidad": m.cantidad.toFixed(2),
+                            "Unidad": m.unidad,
+                            "Costo Total Estimado": Math.round(m.costo)
+                          })));
+                          const workbook = XLSX.utils.book_new();
+                          XLSX.utils.book_append_sheet(workbook, worksheet, "Materiales");
+                          XLSX.writeFile(workbook, `ObraGo_Presupuesto_${name || 'Scan'}.xlsx`);
+                        }}
+                        className="h-14 border-green-500/30 text-green-400 font-bold rounded-2xl flex items-center justify-center gap-2 text-xs hover:bg-green-500/10"
+                      >
+                        <Download className="w-4 h-4" />
+                        EXCEL
+                      </Button>
+
+                      <Button 
+                        variant="outline"
+                        onClick={() => generateSumaAlzadaContract(name, costBreakdown, materials)}
+                        className="h-14 border-blue-500/30 text-blue-400 font-bold rounded-2xl flex items-center justify-center gap-2 text-xs hover:bg-blue-500/10"
+                      >
+                        <FileText className="w-4 h-4" />
+                        CONTRATO
+                      </Button>
+                    </div>
                   )}
 
                   <div className="grid grid-cols-2 gap-3">
