@@ -919,6 +919,12 @@ app.post('/api/analyze', authenticateToken, upload.array('images', 10), async (r
               damage_identified: "Ninguno",
               mediator_verdict: "Partida aprobada para avance de obra."
             },
+            quality_audit: {
+              score: 92,
+              defects_detected: ["Micro-fisura superficial en esquina superior"],
+              criticality: "low",
+              post_venta_warning: "Bajo riesgo de reclamo. Se sugiere sellado cosmético antes de pintar."
+            },
             calidad_analisis: { iluminacion: "buena", enfoque: "nitido", advertencia: "MODO MOCK" },
             alternativas: ["tabique_st"],
             recomendacion_cuadrilla: "1 Maestro + 2 Ayudantes",
@@ -947,15 +953,19 @@ app.post('/api/analyze', authenticateToken, upload.array('images', 10), async (r
         };
       });
 
-      const systemPrompt = `Eres un Ingeniero Civil de Terreno experto en Obra Go, Prevencionista de Riesgos y Auditor de Calidad. 
-      Analiza estas fotografías o planos de obra e identifica partidas y riesgos.
+      const systemPrompt = `Eres un Ingeniero Civil experto en Auditoría de Calidad y Post-Venta AEC. 
+      Analiza estas fotografías o planos para identificar partidas, riesgos y DEFECTOS DE CALIDAD.
 
       ESTRATEGIA DE ANÁLISIS:
-      1. IDENTIFICACIÓN Y CUBICACIÓN: (Dimensiones, Partida).
-      2. AUDITORÍA DE SEGURIDAD (PRP): (Casco, riesgos de caída, etc).
-      3. ANÁLISIS AMBIENTAL: (CO2, residuos, potencial solar).
-      4. PROTECTOR DE CLIMA (NUEVO): Evalúa la criticidad del clima actual/futuro para esta partida específica (ej: Hormigonado + Lluvia/Helada = Peligro).
-      5. MEDIADOR DE DISPUTAS: Si se proporcionan imágenes de "Antes" y "Después", identifica diferencias, daños o avances técnicos.
+      1. IDENTIFICACIÓN: (Partida y Dimensiones).
+      2. AUDITORÍA DE SEGURIDAD (PRP).
+      3. IMPACTO AMBIENTAL.
+      4. AUDITORÍA DE CALIDAD / POST-VENTA:
+         - Busca micro-fisuras o grietas en muros/losas.
+         - Busca manchas de humedad o filtraciones.
+         - Evalúa el aplomo y terminaciones (pintura, juntas).
+         - Genera un "Quality Score" (1-100).
+      5. PROTECTOR DE CLIMA Y MEDIACIÓN.
 
       IDS PERMITIDOS: [radier_estandar, tabique_st, cielo_falso_st, cie_prov_osb, techumbre_zinc, albañileria_ladrillo].
       
@@ -967,15 +977,12 @@ app.post('/api/analyze', authenticateToken, upload.array('images', 10), async (r
         "dimensiones": { ... },
         "safety_analysis": { ... },
         "environmental_impact": { ... },
-        "weather_risk": {
-           "status": "clear" | "warning" | "danger",
-           "alert": "Título de la alerta",
-           "recommendation": "Acción inmediata..."
-        },
-        "dispute_analysis": {
-           "changes_detected": "...",
-           "damage_identified": "...",
-           "mediator_verdict": "..."
+        "weather_risk": { ... },
+        "quality_audit": {
+           "score": 0-100,
+           "defects_detected": ["fisura_muro", "humedad_incipiente", ...],
+           "criticality": "low" | "medium" | "high",
+           "post_venta_warning": "Resumen del riesgo de reclamo futuro..."
         },
         "confianza": 0.XX,
         "is_fallback": boolean,
@@ -1045,6 +1052,12 @@ app.post('/api/analyze', authenticateToken, upload.array('images', 10), async (r
           status: "clear",
           alert: "Clima estable",
           recommendation: "Sin alertas climáticas para esta partida."
+        },
+        quality_audit: {
+          score: 85,
+          defects_detected: [],
+          criticality: "low",
+          post_venta_warning: "Sin riesgos críticos detectados."
         },
         confidence: 0.3,
         is_fallback: true,

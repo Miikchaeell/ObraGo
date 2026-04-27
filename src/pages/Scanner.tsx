@@ -165,10 +165,51 @@ const generateElitePDF = (projectName, scanResult, costBreakdown, materials, use
       doc.setFontSize(10);
       doc.text(scanResult.environmental_impact.green_tech_expansion?.bio_alternative || "No disponible", 15, finalEnvY + 10, { maxWidth: 180 });
       
-      doc.text(`TRANSPORTE RECOMENDADO: ${scanResult.environmental_impact.green_tech_expansion?.recommended_truck || "Simple"}`, 15, finalEnvY + 25);
+      doc.text(`TRANSPORTE RECOMENDADO: ${scanResult.environmental_impact.green_tech_expansion?.recommended_truck || "Simple"}`, 150, finalEnvY + 25);
+    }
+
+    // [v19.0] CERTIFICADO DE CALIDAD Y POST-VENTA
+    if (scanResult?.quality_audit) {
+      doc.addPage();
+      doc.setFillColor(30, 30, 30); // Dark Profile
+      doc.rect(0, 0, 210, 297, 'F');
+      
+      doc.setFontSize(22);
+      doc.setTextColor(212, 175, 55); // Gold
+      doc.text("CERTIFICADO DE CALIDAD AEC", 105, 40, { align: "center" });
+      
+      doc.setFontSize(10);
+      doc.setTextColor(200, 200, 200);
+      doc.text("Auditoría Preventiva de Post-Venta - ObraGo V19.0", 105, 50, { align: "center" });
+      
+      doc.setFillColor(40, 40, 40);
+      doc.roundedRect(20, 70, 170, 40, 5, 5, 'F');
+      doc.setFontSize(30);
+      doc.text(`${scanResult.quality_audit.score}%`, 105, 95, { align: "center" });
+      doc.setFontSize(10);
+      doc.text("PUNTAJE DE CALIDAD FINAL", 105, 105, { align: "center" });
+      
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(14);
+      doc.text("DETALLES DE LA AUDITORÍA:", 20, 130);
+      
+      let yPos = 140;
+      scanResult.quality_audit.defects_detected?.forEach(defect => {
+        doc.setFontSize(10);
+        doc.text(`- ${defect}`, 25, yPos);
+        yPos += 8;
+      });
+      
+      doc.setFontSize(12);
+      doc.setTextColor(212, 175, 55);
+      doc.text("RIESGO DE POST-VENTA:", 20, yPos + 10);
+      doc.setFontSize(10);
+      doc.setTextColor(255, 255, 255);
+      doc.text(scanResult.quality_audit.post_venta_warning, 20, yPos + 20, { maxWidth: 170 });
       
       doc.setFontSize(8);
-      doc.text("Este reporte certifica el compromiso de la obra con la reducción de impacto ambiental.", 105, 280, { align: "center" });
+      doc.setTextColor(150, 150, 150);
+      doc.text("Este certificado es una auditoría visual por IA. No reemplaza la inspección técnica de obra (ITO).", 105, 280, { align: "center" });
     }
 
     doc.save(`Reporte_Elite_ObraGo_${projectName || 'Scan'}.pdf`);
@@ -663,6 +704,42 @@ export default function Scanner() {
                         <Leaf key={i} className={`w-3 h-3 ${i < scanResult.environmental_impact.green_score ? 'text-green-400' : 'text-slate-700'}`} />
                       ))}
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {scanResult.quality_audit && (
+                <div className="mt-4 p-5 bg-white/5 border border-white/10 rounded-[30px] space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                       <CheckCircle2 className="w-5 h-5 text-green-400" />
+                       <h4 className="text-xs font-black text-white uppercase tracking-widest">Auditoría de Calidad</h4>
+                    </div>
+                    <div className="flex flex-col items-end">
+                       <span className="text-[10px] text-slate-500 font-bold">QUALITY SCORE</span>
+                       <span className={`text-xl font-black ${scanResult.quality_audit.score > 90 ? 'text-green-400' : 'text-yellow-400'}`}>
+                         {scanResult.quality_audit.score}%
+                       </span>
+                    </div>
+                  </div>
+
+                  {scanResult.quality_audit.defects_detected?.length > 0 ? (
+                    <div className="space-y-2">
+                       <p className="text-[8px] text-red-400 font-black uppercase tracking-widest">Observaciones de Post-Venta</p>
+                       {scanResult.quality_audit.defects_detected.map((defect, idx) => (
+                         <div key={idx} className="flex items-start gap-2 text-[11px] text-slate-300">
+                            <span className="w-1.5 h-1.5 bg-red-400 rounded-full mt-1 shrink-0"></span>
+                            {defect}
+                         </div>
+                       ))}
+                    </div>
+                  ) : (
+                    <p className="text-[11px] text-green-400 font-bold italic">No se detectan defectos visuales de calidad.</p>
+                  )}
+
+                  <div className={`p-3 rounded-2xl border ${scanResult.quality_audit.criticality === 'low' ? 'bg-green-500/10 border-green-500/20' : 'bg-red-500/10 border-red-500/20'}`}>
+                     <p className="text-[9px] text-slate-400 font-bold uppercase mb-1">Impacto Post-Venta</p>
+                     <p className="text-[11px] text-slate-200 leading-tight">{scanResult.quality_audit.post_venta_warning}</p>
                   </div>
                 </div>
               )}
