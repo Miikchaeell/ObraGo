@@ -2,7 +2,7 @@
 // @ts-nocheck
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
-import { ChevronLeft, RotateCcw, Camera, Loader2, CheckCircle2, Mic, CreditCard, Share2, Zap, Download, FileText, ShieldAlert, ShieldCheck, ShoppingCart, Lock, Leaf, Droplets, Recycle, Sun, Truck, Thermometer, CloudLightning, Gavel } from "lucide-react";
+import { ChevronLeft, RotateCcw, Camera, Loader2, CheckCircle2, Mic, CreditCard, Share2, Zap, Download, FileText, ShieldAlert, ShieldCheck, ShoppingCart, Lock, Leaf, Droplets, Recycle, Sun, Truck, Thermometer, CloudLightning, Gavel, TrendingUp, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -210,6 +210,43 @@ const generateElitePDF = (projectName, scanResult, costBreakdown, materials, use
       doc.setFontSize(8);
       doc.setTextColor(150, 150, 150);
       doc.text("Este certificado es una auditoría visual por IA. No reemplaza la inspección técnica de obra (ITO).", 105, 280, { align: "center" });
+    }
+
+    // [v20.0] INTELIGENCIA FINANCIERA Y PROYECCIÓN
+    if (scanResult?.financial_forecast) {
+      doc.addPage();
+      doc.setFillColor(245, 245, 245);
+      doc.rect(0, 0, 210, 297, 'F');
+      
+      doc.setFontSize(22);
+      doc.setTextColor(0, 0, 0);
+      doc.text("PROYECCIÓN FINANCIERA DE OBRA", 105, 40, { align: "center" });
+      
+      doc.setFontSize(10);
+      doc.text("Análisis Predictivo de Mercado AEC - ObraGo V20.0", 105, 50, { align: "center" });
+      
+      autoTable(doc, {
+        startY: 70,
+        head: [['Material / Partida', 'Tendencia', 'Variación Est.']],
+        body: [
+          [scanResult.partida, scanResult.financial_forecast.trend === 'up' ? 'ALZA' : 'BAJA', `${scanResult.financial_forecast.expected_variation_percent}%`],
+          ['Impacto Financiero Total', '', `$${scanResult.financial_forecast.opportunity_cost_clp?.toLocaleString('es-CL')}`]
+        ],
+        theme: 'grid',
+        headStyles: { fillColor: [0, 0, 0] }
+      });
+      
+      const finalFinY = (doc as any).lastAutoTable.finalY + 20;
+      doc.setFontSize(14);
+      doc.text("ESTRATEGIA RECOMENDADA:", 20, finalFinY);
+      doc.setFontSize(12);
+      doc.setTextColor(scanResult.financial_forecast.buy_recommendation === 'buy_now' ? [200, 0, 0] : [0, 150, 0]);
+      doc.text(scanResult.financial_forecast.buy_recommendation === 'buy_now' ? "COMPRAR Y STOCKEAR HOY" : "ESPERAR MEJOR MOMENTO", 20, finalFinY + 10);
+      
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(10);
+      doc.text("ANÁLISIS TÉCNICO:", 20, finalFinY + 25);
+      doc.text(scanResult.financial_forecast.analysis_reason, 20, finalFinY + 35, { maxWidth: 170 });
     }
 
     doc.save(`Reporte_Elite_ObraGo_${projectName || 'Scan'}.pdf`);
@@ -741,6 +778,41 @@ export default function Scanner() {
                      <p className="text-[9px] text-slate-400 font-bold uppercase mb-1">Impacto Post-Venta</p>
                      <p className="text-[11px] text-slate-200 leading-tight">{scanResult.quality_audit.post_venta_warning}</p>
                   </div>
+                </div>
+              )}
+
+              {scanResult.financial_forecast && (
+                <div className="mt-4 p-5 bg-black/40 border border-white/10 rounded-[30px] space-y-4 backdrop-blur-md">
+                   <div className="flex items-center gap-2">
+                      <TrendingUp className={`w-5 h-5 ${scanResult.financial_forecast.trend === 'up' ? 'text-red-400' : 'text-green-400'}`} />
+                      <h4 className="text-xs font-black text-white uppercase tracking-widest">Inteligencia Financiera</h4>
+                   </div>
+
+                   <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl">
+                      <div>
+                         <p className="text-[8px] text-slate-500 font-bold uppercase mb-1">Tendencia 60 Días</p>
+                         <p className={`text-sm font-black ${scanResult.financial_forecast.trend === 'up' ? 'text-red-400' : 'text-green-400'}`}>
+                           {scanResult.financial_forecast.trend === 'up' ? 'ALZA' : 'BAJA'} (+{scanResult.financial_forecast.expected_variation_percent}%)
+                         </p>
+                      </div>
+                      <div className="text-right">
+                         <p className="text-[8px] text-slate-500 font-bold uppercase mb-1">Recomendación</p>
+                         <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${scanResult.financial_forecast.buy_recommendation === 'buy_now' ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'}`}>
+                            {scanResult.financial_forecast.buy_recommendation === 'buy_now' ? 'COMPRAR HOY' : 'ESPERAR'}
+                         </span>
+                      </div>
+                   </div>
+
+                   <div className="flex items-center gap-3">
+                      <Wallet className="w-4 h-4 text-[#D4AF37]" />
+                      <p className="text-[11px] text-slate-300">
+                        Ahorro potencial si stockeas hoy: <span className="text-[#D4AF37] font-black">${scanResult.financial_forecast.opportunity_cost_clp?.toLocaleString('es-CL')}</span>
+                      </p>
+                   </div>
+                   
+                   <p className="text-[10px] text-slate-500 italic leading-tight">
+                     *Análisis basado en: {scanResult.financial_forecast.analysis_reason}
+                   </p>
                 </div>
               )}
 

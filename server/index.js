@@ -925,6 +925,13 @@ app.post('/api/analyze', authenticateToken, upload.array('images', 10), async (r
               criticality: "low",
               post_venta_warning: "Bajo riesgo de reclamo. Se sugiere sellado cosmético antes de pintar."
             },
+            financial_forecast: {
+              trend: "up",
+              expected_variation_percent: 4.5,
+              buy_recommendation: "buy_now",
+              opportunity_cost_clp: 125000,
+              analysis_reason: "Se proyecta alza en el precio del acero y hormigón premezclado por costo de fletes."
+            },
             calidad_analisis: { iluminacion: "buena", enfoque: "nitido", advertencia: "MODO MOCK" },
             alternativas: ["tabique_st"],
             recomendacion_cuadrilla: "1 Maestro + 2 Ayudantes",
@@ -953,19 +960,20 @@ app.post('/api/analyze', authenticateToken, upload.array('images', 10), async (r
         };
       });
 
-      const systemPrompt = `Eres un Ingeniero Civil experto en Auditoría de Calidad y Post-Venta AEC. 
-      Analiza estas fotografías o planos para identificar partidas, riesgos y DEFECTOS DE CALIDAD.
+      const systemPrompt = `Eres un Ingeniero Civil experto en Gestión de Costos, Análisis de Mercado AEC e Inteligencia Financiera. 
+      Analiza estas fotografías o planos e identifica partidas, riesgos, calidad y PROYECCIÓN DE COSTOS.
 
       ESTRATEGIA DE ANÁLISIS:
-      1. IDENTIFICACIÓN: (Partida y Dimensiones).
-      2. AUDITORÍA DE SEGURIDAD (PRP).
+      1. IDENTIFICACIÓN Y CUBICACIÓN.
+      2. AUDITORÍA DE SEGURIDAD.
       3. IMPACTO AMBIENTAL.
-      4. AUDITORÍA DE CALIDAD / POST-VENTA:
-         - Busca micro-fisuras o grietas en muros/losas.
-         - Busca manchas de humedad o filtraciones.
-         - Evalúa el aplomo y terminaciones (pintura, juntas).
-         - Genera un "Quality Score" (1-100).
-      5. PROTECTOR DE CLIMA Y MEDIACIÓN.
+      4. AUDITORÍA DE CALIDAD / POST-VENTA.
+      5. INTELIGENCIA FINANCIERA (NUEVO V20):
+         - Estima la tendencia de precios para los materiales detectados en los próximos 30-60 días.
+         - Proporciona un "% de Variación Esperada".
+         - Recomienda si es mejor "Comprar Hoy" (Stockear) o "Esperar".
+         - Estima el "Costo de Oportunidad" si no se compra hoy.
+      6. PROTECTOR DE CLIMA Y MEDIACIÓN.
 
       IDS PERMITIDOS: [radier_estandar, tabique_st, cielo_falso_st, cie_prov_osb, techumbre_zinc, albañileria_ladrillo].
       
@@ -978,11 +986,13 @@ app.post('/api/analyze', authenticateToken, upload.array('images', 10), async (r
         "safety_analysis": { ... },
         "environmental_impact": { ... },
         "weather_risk": { ... },
-        "quality_audit": {
-           "score": 0-100,
-           "defects_detected": ["fisura_muro", "humedad_incipiente", ...],
-           "criticality": "low" | "medium" | "high",
-           "post_venta_warning": "Resumen del riesgo de reclamo futuro..."
+        "quality_audit": { ... },
+        "financial_forecast": {
+           "trend": "up" | "down" | "stable",
+           "expected_variation_percent": X,
+           "buy_recommendation": "buy_now" | "wait",
+           "opportunity_cost_clp": Y,
+           "analysis_reason": "Motivo basado en mercado (ej: alza del acero)..."
         },
         "confianza": 0.XX,
         "is_fallback": boolean,
@@ -1058,6 +1068,13 @@ app.post('/api/analyze', authenticateToken, upload.array('images', 10), async (r
           defects_detected: [],
           criticality: "low",
           post_venta_warning: "Sin riesgos críticos detectados."
+        },
+        financial_forecast: {
+          trend: "stable",
+          expected_variation_percent: 0,
+          buy_recommendation: "wait",
+          opportunity_cost_clp: 0,
+          analysis_reason: "Mercado estable para esta partida."
         },
         confidence: 0.3,
         is_fallback: true,
