@@ -9,12 +9,14 @@ import {
   FileText,
   Scan,
   Zap,
-  ArrowRight
+  ArrowRight,
+  Shield
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { AdSenseSlot } from "@/components/AdSenseSlot";
+import { Button } from "@/components/ui/button";
 
 const cardAlbanileria = "https://images.unsplash.com/photo-1589939705384-5185137a7f0f?q=80&w=800&auto=format&fit=crop";
 const cardHormigon = "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=800&auto=format&fit=crop";
@@ -109,6 +111,31 @@ export default function Index() {
               </div>
             </div>
           </header>
+
+          {/* Dashboard de Suscripción */}
+          <section className="p-6 bg-gradient-to-r from-slate-900 to-black border border-[#D4AF37]/20 rounded-3xl relative overflow-hidden shadow-2xl">
+             <div className="absolute top-0 right-0 p-4 opacity-10"><Crown className="w-24 h-24 text-[#D4AF37]" /></div>
+             <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#D4AF37] mb-2 flex items-center gap-2"><Shield className="w-4 h-4" /> Mi Suscripción</h3>
+             <div className="flex justify-between items-end relative z-10">
+               <div>
+                 <h2 className="text-2xl font-black text-white uppercase tracking-tighter">
+                   {plan === 'free' ? 'Plan Gratuito' : plan === 'basic' ? 'Plan Contratista' : plan === 'pro' ? 'Constructora Pro' : 'Corporativo'}
+                 </h2>
+                 <p className="text-[10px] text-slate-400 mt-1 font-bold uppercase tracking-widest">
+                   {plan === 'free' ? 'Actualiza para liberar motor AEC' : 'Herramientas de ingeniería activadas'}
+                 </p>
+               </div>
+               {plan === 'free' ? (
+                 <Button onClick={() => navigate('/pricing')} className="h-8 px-4 text-[10px] bg-[#D4AF37] hover:bg-white text-black font-black uppercase rounded-full transition-all">
+                   Mejorar Plan
+                 </Button>
+               ) : (
+                 <div className="h-8 px-4 text-[10px] border border-[#D4AF37]/50 text-[#D4AF37] font-black uppercase rounded-full flex items-center justify-center bg-[#D4AF37]/10">
+                   Activo
+                 </div>
+               )}
+             </div>
+          </section>
 
           {/* Quick Access Grid */}
           <div className="grid grid-cols-3 gap-4">

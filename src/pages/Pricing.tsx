@@ -7,41 +7,33 @@ import { AdSenseSlot } from "@/components/AdSenseSlot";
 
 const plans = [
   {
-    name: "Gratis",
-    planType: "free",
-    price: "$0",
-    features: ["1 Cubicación básica", "Sin Reporte PDF", "Cálculo IA simple"],
-    buttonText: "Plan Actual",
-    priceId: "",
-    highlight: false
-  },
-  {
-    name: "Profesional",
+    name: "Contratista",
     planType: "basic",
-    price: "$19.990",
+    price: "$29.990",
     period: "/mes",
-    features: ["Cubicaciones AEC ilimitadas", "Cascada Comercial (GG/Util/IVA)", "Reportes Élite PDF"],
-    buttonText: "Elegir Profesional",
-    priceId: "price_basic_id", // Placeholder
-    highlight: true
+    features: ["Acceso a la app", "5 escaneos gratuitos al mes", "Descarga de PDF básico"],
+    buttonText: "Elegir Contratista",
+    priceId: "price_basic_id",
+    highlight: false
   },
   {
-    name: "Empresa",
+    name: "Constructora Pro",
     planType: "pro",
-    price: "$49.990",
+    price: "$89.990",
     period: "/mes",
-    features: ["Todo lo Profesional", "Auditoría Normas NCh", "IA Predictiva de Costos", "Firma Digital Ingeniero"],
-    buttonText: "Elegir Empresa",
-    priceId: "price_pro_id", // Placeholder
-    highlight: false
+    features: ["Escaneos ilimitados", "Auditoría NCh activa", "Historial ilimitado", "APU completo en PDF", "Soporte prioritario"],
+    buttonText: "Elegir Pro",
+    priceId: "price_pro_id",
+    highlight: true
   },
   {
     name: "Corporativo",
     planType: "enterprise",
-    price: "Custom",
-    features: ["API de Cálculos Múltiples", "Base de datos personalizada", "Integración ERP", "Soporte Terreno 24/7"],
+    price: "$249.990",
+    period: "/mes",
+    features: ["Módulo de Logo Personalizado", "Acceso multi-usuario", "Proyectos Gran Escala (> $50M)", "Integración API"],
     buttonText: "Contactar Ventas",
-    priceId: "price_enterprise_id", // Placeholder
+    priceId: "price_enterprise_id",
     highlight: false
   }
 ];

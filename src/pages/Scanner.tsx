@@ -77,15 +77,26 @@ const generateElitePDF = async (projectName, scanResult, costBreakdown, material
     doc.setTextColor(150, 150, 150);
     doc.text("DESCARGO DE RESPONSABILIDAD: Este reporte es una estimación técnica basada en parámetros AEC-CHILE. Los precios referenciales tienen una validez de 5 días hábiles desde su emisión.", 105, 285, { align: "center", maxWidth: 180 });
 
+    // MOTOR DE REFERIDOS V21.4
+    doc.setFontSize(8);
+    doc.setTextColor(212, 175, 55); // Dorado
+    doc.text("¿Te sirvió este presupuesto? Recomienda ObraGo a un colega y obtén un mes de Plan Pro gratis.", 105, 292, { align: "center", maxWidth: 180 });
+
     doc.save(`Reporte_Elite_AEC_${projectName || 'Obra'}.pdf`);
   } catch (e) { console.error(e); }
 };
 
 export default function Scanner() {
-  const { user } = useAuth();
+  const { user, plan } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const isUnlocked = user?.email === 'michael.seura.delgado@gmail.com' || searchParams.get('status') === 'approved';
+  const isUnlocked = plan === 'pro' || plan === 'enterprise' || user?.email === 'michael.seura.delgado@gmail.com' || searchParams.get('status') === 'approved';
+
+  const getDynamicPDFPrice = (total: number) => {
+    if (total > 50000000) return 59990;
+    if (total > 10000000) return 24990;
+    return 9990;
+  };
 
   const [step, setStep] = useState('config');
   const [name, setName] = useState('');
@@ -217,8 +228,13 @@ export default function Scanner() {
               <p className="text-[10px] font-black text-[#D4AF37] uppercase tracking-[0.3em] mb-4">Total Presupuesto AEC</p>
               <h3 className="text-4xl font-black text-white tracking-tighter">${costBreakdown.total.toLocaleString('es-CL')}</h3>
               
-              <div className="grid grid-cols-1 gap-4 mt-8 text-left">
-                <div className="p-5 bg-white/5 rounded-3xl border border-white/10">
+              <div className={`grid grid-cols-1 gap-4 mt-8 text-left ${!isUnlocked ? 'blur-md select-none opacity-50' : ''}`}>
+                <div className="p-5 bg-white/5 rounded-3xl border border-white/10 relative">
+                  {!isUnlocked && (
+                    <div className="absolute inset-0 z-10 flex items-center justify-center">
+                      <Lock className="w-8 h-8 text-[#D4AF37] opacity-80 drop-shadow-2xl" />
+                    </div>
+                  )}
                   <p className="text-[10px] text-[#D4AF37] font-black uppercase mb-3">Cascada Comercial</p>
                   <div className="space-y-2 text-xs">
                     <div className="flex justify-between"><span>Costo Directo</span><span className="font-bold text-white">${costBreakdown.costoDirecto.toLocaleString('es-CL')}</span></div>
@@ -245,12 +261,14 @@ export default function Scanner() {
 
               <div className="mt-8 space-y-4">
                 {isUnlocked ? (
-                  <Button onClick={() => generateElitePDF(name, scanResult, costBreakdown, materials, signature)} className="w-full h-16 premium-button text-black font-black rounded-2xl text-md shadow-2xl">
-                    DESCARGAR REPORTE AEC ELITE
+                  <Button onClick={() => generateElitePDF(name, scanResult, costBreakdown, materials, signature)} className="w-full h-16 premium-button text-black font-black rounded-2xl text-md shadow-2xl flex flex-col items-center justify-center leading-none">
+                    <span>DESCARGAR REPORTE AEC ELITE</span>
+                    <span className="text-[9px] mt-1 text-black/70 flex items-center gap-1"><ShieldCheck className="w-3 h-3"/> Certificado bajo Normas Chilenas NCh</span>
                   </Button>
                 ) : (
-                  <Button onClick={() => alert('🔒 Transacción Protegida: El pago de $2.990 no ha sido procesado por Mercado Pago.')} className="w-full h-16 bg-slate-800 text-slate-400 font-black rounded-2xl text-md shadow-2xl">
-                    GENERAR REPORTE AEC ($2.990) - BLOQUEADO
+                  <Button onClick={() => alert(`🔒 Transacción Protegida: Para liberar la ingeniería de este proyecto, debes certificar el reporte ($${getDynamicPDFPrice(costBreakdown.total).toLocaleString('es-CL')}).`)} className="w-full h-16 bg-slate-800 text-slate-400 font-black rounded-2xl text-md shadow-2xl border border-[#D4AF37]/20 flex flex-col items-center justify-center leading-none">
+                    <span className="flex items-center gap-2"><Lock className="w-4 h-4"/> DESCARGAR REPORTE CERTIFICADO (${getDynamicPDFPrice(costBreakdown.total).toLocaleString('es-CL')})</span>
+                    <span className="text-[9px] mt-1 text-slate-500 uppercase">AEC-Chile Tramo Asignado</span>
                   </Button>
                 )}
                 
