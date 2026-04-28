@@ -37,6 +37,7 @@ import cookieParser from 'cookie-parser';
 import { createPaymentPreference } from './services/payment.js';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import CryptoJS from 'crypto-js';
+import nodemailer from 'nodemailer';
 
 const isProduction = process.env.NODE_ENV === 'production';
 const hasEmailConfig = !!(process.env.EMAIL_USER && process.env.EMAIL_PASS);
