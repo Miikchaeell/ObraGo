@@ -10,37 +10,37 @@ const plans = [
     name: "Gratis",
     planType: "free",
     price: "$0",
-    features: ["3 Cubicaciones totales", "Reporte PDF básico", "Historial limitado"],
+    features: ["1 Cubicación básica", "Sin Reporte PDF", "Cálculo IA simple"],
     buttonText: "Plan Actual",
     priceId: "",
     highlight: false
   },
   {
-    name: "Básico",
+    name: "Profesional",
     planType: "basic",
     price: "$19.990",
     period: "/mes",
-    features: ["10 Cubicaciones/mes", "Todo lo de Gratis", "Soporte estándar"],
-    buttonText: "Elegir Básico",
+    features: ["Cubicaciones AEC ilimitadas", "Cascada Comercial (GG/Util/IVA)", "Reportes Élite PDF"],
+    buttonText: "Elegir Profesional",
     priceId: "price_basic_id", // Placeholder
     highlight: true
   },
   {
-    name: "Pro",
+    name: "Empresa",
     planType: "pro",
-    price: "$39.990",
+    price: "$49.990",
     period: "/mes",
-    features: ["Cubicaciones Ilimitadas", "Análisis avanzado IA", "Exportación HD", "Soporte prioritario"],
-    buttonText: "Elegir Pro",
+    features: ["Todo lo Profesional", "Auditoría Normas NCh", "IA Predictiva de Costos", "Firma Digital Ingeniero"],
+    buttonText: "Elegir Empresa",
     priceId: "price_pro_id", // Placeholder
     highlight: false
   },
   {
-    name: "Empresa",
+    name: "Corporativo",
     planType: "enterprise",
     price: "Custom",
-    features: ["Cuentas multiusuario", "API personalizada", "Configuración en sitio", "SLA garantizado"],
-    buttonText: "Contactar",
+    features: ["API de Cálculos Múltiples", "Base de datos personalizada", "Integración ERP", "Soporte Terreno 24/7"],
+    buttonText: "Contactar Ventas",
     priceId: "price_enterprise_id", // Placeholder
     highlight: false
   }
