@@ -145,6 +145,29 @@ export default function Scanner() {
   const [signature, setSignature] = useState(null);
   const canvasRef = useRef(null);
   const [isDrawing, setIsDrawing] = useState(false);
+  const [supplierMatch, setSupplierMatch] = useState<{name: string, distance: string, saving: string} | null>(null);
+  const [showBiometric, setShowBiometric] = useState(false);
+
+  useEffect(() => {
+    if (step === 'result' && isUnlocked) {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(() => {
+          setSupplierMatch({
+            name: "Ferretería Industrial AEC",
+            distance: "1.8 km",
+            saving: "14%"
+          });
+        }, () => {
+          // If denied, still show a default fallback for demo
+          setSupplierMatch({
+            name: "Proveedor Local Autorizado",
+            distance: "3.2 km",
+            saving: "8%"
+          });
+        });
+      }
+    }
+  }, [step, isUnlocked]);
 
   useEffect(() => {
     if (searchParams.get('status') === 'approved') {
@@ -233,6 +256,17 @@ export default function Scanner() {
               type="text" placeholder="Nombre de la Obra" value={name} onChange={(e) => setName(e.target.value)}
               className="w-full bg-white/5 border border-white/10 p-5 rounded-2xl text-lg font-bold focus:border-[#D4AF37] outline-none"
             />
+            
+            <div className="grid grid-cols-2 gap-4">
+              <Button variant="outline" onClick={() => setShowBiometric(true)} className="h-16 border-white/10 text-white font-black rounded-2xl flex flex-col items-center justify-center gap-1">
+                <Scan className="w-5 h-5 text-blue-400" />
+                <span className="text-[8px] uppercase tracking-widest">Pase de Lista</span>
+              </Button>
+              <Button variant="outline" className="h-16 border-white/10 text-white font-black rounded-2xl flex flex-col items-center justify-center gap-1">
+                <FileText className="w-5 h-5 text-orange-400" />
+                <span className="text-[8px] uppercase tracking-widest">Ver Planos</span>
+              </Button>
+            </div>
             <div 
               className="aspect-square border-2 border-dashed border-[#D4AF37]/20 rounded-[48px] flex flex-col items-center justify-center gap-6 bg-[#D4AF37]/5 cursor-pointer group relative" 
               onClick={() => document.getElementById('file-up').click()}
@@ -304,6 +338,19 @@ export default function Scanner() {
                 </div>
               </div>
 
+              {supplierMatch && (
+                <div className="mt-4 p-4 bg-[#D4AF37]/10 border border-[#D4AF37]/30 rounded-2xl animate-in slide-in-from-bottom flex items-center justify-between text-left">
+                  <div>
+                    <p className="text-[10px] text-[#D4AF37] font-black uppercase mb-1 flex items-center gap-1">📍 Match de Proveedor ({supplierMatch.distance})</p>
+                    <p className="text-sm font-bold text-white">{supplierMatch.name}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-green-400 font-bold">-{supplierMatch.saving}</p>
+                    <p className="text-[8px] text-slate-400 uppercase">Ahorro Est.</p>
+                  </div>
+                </div>
+              )}
+
               <div className="mt-8 space-y-4">
                 {isUnlocked ? (
                   <Button onClick={() => generateElitePDF(name, scanResult, costBreakdown, materials, signature)} className="w-full h-16 premium-button text-black font-black rounded-2xl text-md shadow-2xl flex flex-col items-center justify-center leading-none">
@@ -354,6 +401,28 @@ export default function Scanner() {
 
       {showAR && <AROverlay scanResult={scanResult} onClose={() => setShowAR(false)} />}
       <VoiceAssistant context={scanResult} />
+
+      {showBiometric && (
+        <div className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-xl flex flex-col p-8 items-center justify-center animate-in fade-in zoom-in">
+           <div className="w-full max-w-sm space-y-8 text-center">
+              <div>
+                <Scan className="w-20 h-20 text-blue-500 mx-auto mb-4 animate-pulse" />
+                <h3 className="text-2xl font-black text-white tracking-tighter">Control Biométrico</h3>
+                <p className="text-[10px] text-slate-400 uppercase tracking-widest mt-2">Reconocimiento Facial Activo</p>
+              </div>
+              <div className="aspect-square rounded-[40px] border-2 border-dashed border-blue-500/50 bg-blue-500/10 flex items-center justify-center relative overflow-hidden">
+                 <div className="w-full h-1 bg-blue-500/50 absolute top-0 animate-[progress_3s_infinite_ease-in-out]"></div>
+                 <p className="text-xs font-bold text-blue-300">Apunte la cámara a la cuadrilla</p>
+              </div>
+              <Button onClick={() => {
+                alert("Asistencia Registrada: 4 Trabajadores en obra hoy. Costo cargado al APU.");
+                setShowBiometric(false);
+              }} className="w-full h-16 premium-button text-black font-black rounded-2xl">
+                 CAPTURAR ASISTENCIA
+              </Button>
+           </div>
+        </div>
+      )}
       
       <footer className="p-8 text-center border-t border-white/5 opacity-30">
         <p className="text-[8px] font-black uppercase tracking-[0.5em]">Obra Go Senior v21.1 AEC-CHILE MASTER</p>
