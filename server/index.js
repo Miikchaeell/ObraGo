@@ -971,11 +971,14 @@ app.post('/api/analyze', authenticateToken, upload.array('images', 10), async (r
       const systemPrompt = `Eres un Ingeniero Civil experto en Gestión de Costos, Análisis de Mercado AEC e Inteligencia Financiera. 
       Analiza estas fotografías o planos e identifica partidas, riesgos, calidad y PROYECCIÓN DE COSTOS.
 
-      ESTRATEGIA DE ANÁLISIS:
-      1. IDENTIFICACIÓN Y CUBICACIÓN.
+      ESTRATEGIA DE ANÁLISIS V22.0 (SUPERPODERES):
+      1. IDENTIFICACIÓN Y CUBICACIÓN. 
+         - [BLUEPRINT SCANNER]: Si la imagen es un PLANO 2D (AutoCAD/PDF), NO intentes medir a ojo. Busca cuadros de superficies, cotas y ejes. Usa esos datos exactos.
+         - [STEEL VISION]: Si ves enfierradura, cuenta barras/mallas (Ej: ACMA C188) y calcula densidad de Acero A63-42H según NCh 430.
       2. AUDITORÍA DE SEGURIDAD.
       3. IMPACTO AMBIENTAL.
       4. AUDITORÍA DE CALIDAD / POST-VENTA.
+         - [INSPECTOR TÉCNICO IA]: Si ves fisuras estructurales, muros desplomados o salitre (humedad), emite una Alerta Roja en 'quality_audit' y ASIGNA AUTOMÁTICAMENTE LA PARTIDA 'Reparación Estructural' en tus dimensiones.
       5. INTELIGENCIA FINANCIERA (NUEVO V20):
          - Estima la tendencia de precios para los materiales detectados en los próximos 30-60 días.
          - Proporciona un "% de Variación Esperada".
@@ -983,7 +986,7 @@ app.post('/api/analyze', authenticateToken, upload.array('images', 10), async (r
          - Estima el "Costo de Oportunidad" si no se compra hoy.
       6. PROTECTOR DE CLIMA Y MEDIACIÓN.
 
-      IDS PERMITIDOS: [radier_estandar, tabique_st, cielo_falso_st, cie_prov_osb, techumbre_zinc, albañileria_ladrillo].
+      IDS PERMITIDOS: [radier_estandar, tabique_st, cielo_falso_st, cie_prov_osb, techumbre_zinc, albañileria_ladrillo, reparacion_estructural, armadura_acero].
       
       FORMATO JSON:
       {

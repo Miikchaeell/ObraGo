@@ -6,7 +6,7 @@ import { ChevronLeft, RotateCcw, Camera, Loader2, CheckCircle2, Mic, CreditCard,
 import { Button } from "@/components/ui/button";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
-import { calculateMaterialQuantities, calculateTotalCost } from "@/services/calculator";
+import { calculateMaterialQuantities, calculateTotalCost, calculateLaborBreakdown } from "@/services/calculator";
 import { useAuth } from "@/context/AuthContext";
 import * as XLSX from 'xlsx';
 import { generateSumaAlzadaContract } from "@/services/contractGenerator";
@@ -96,6 +96,42 @@ export default function Scanner() {
     if (total > 50000000) return 59990;
     if (total > 10000000) return 24990;
     return 9990;
+  };
+
+  const exportToExcel = () => {
+    if (!costBreakdown || !materials || !scanResult) return;
+    
+    const wsData = [
+      ["PRESUPUESTO ÉLITE AEC - OBRA GO"],
+      ["Proyecto:", name || 'Obra Sin Nombre'],
+      ["Partida:", scanResult.partida || 'N/A'],
+      [""],
+      ["CASCADA COMERCIAL"],
+      ["Costo Directo", costBreakdown.costoDirecto],
+      ["Gastos Generales (12%)", costBreakdown.gg],
+      ["Utilidad (15%)", costBreakdown.profit],
+      ["IVA (19%)", costBreakdown.iva],
+      ["TOTAL GENERAL", costBreakdown.total],
+      [""],
+      ["ANÁLISIS DE PRECIOS UNITARIOS (APU)"],
+      ["Material", "Cantidad", "Unidad", "Precio Unitario", "Subtotal"]
+    ];
+
+    materials.forEach((m: any) => {
+      wsData.push([m.name, m.quantity.toFixed(2), m.unit, m.price, m.total]);
+    });
+
+    const labor = calculateLaborBreakdown(costBreakdown.costoDirecto * 0.35); // 35% de incidencia aprox
+    wsData.push([""]);
+    wsData.push(["ANÁLISIS DE MANO DE OBRA (TRATOS)"]);
+    wsData.push(["Total Mano de Obra Sugerida", labor.total]);
+    wsData.push(["Maestro 1ra (60%)", labor.maestroPrimera]);
+    wsData.push(["Jornal / Ayudante (40%)", labor.jornalAyudante]);
+
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Presupuesto AEC");
+    XLSX.writeFile(wb, `Presupuesto_${name || 'Obra'}.xlsx`);
   };
 
   const [step, setStep] = useState('config');
@@ -248,13 +284,22 @@ export default function Scanner() {
                   <p className="text-[10px] text-[#D4AF37] font-black uppercase mb-3">Análisis por Partida</p>
                   <p className="text-sm font-bold text-white mb-2">{scanResult.partida}</p>
                   <div className="space-y-1">
-                    {materials.slice(0, 4).map(m => (
+                    {materials.slice(0, 4).map((m: any) => (
                       <div key={m.id} className="flex justify-between text-[10px] text-slate-400 italic">
                         <span>{m.name}</span>
                         <span>{m.quantity.toFixed(1)} {m.unit}</span>
                       </div>
                     ))}
                     {materials.length > 4 && <p className="text-[8px] text-slate-600 mt-1">+{materials.length - 4} materiales más en el reporte completo</p>}
+                  </div>
+                </div>
+
+                <div className="p-5 bg-white/5 rounded-3xl border border-white/10">
+                  <p className="text-[10px] text-[#D4AF37] font-black uppercase mb-3">Calculadora de Tratos (Mano de Obra)</p>
+                  <div className="space-y-2 text-xs">
+                    <div className="flex justify-between text-slate-400"><span>Maestro 1ra (60%)</span><span className="font-bold text-white">${calculateLaborBreakdown(costBreakdown.costoDirecto * 0.35).maestroPrimera.toLocaleString('es-CL')}</span></div>
+                    <div className="flex justify-between text-slate-400"><span>Jornal / Ayudante (40%)</span><span className="font-bold text-white">${calculateLaborBreakdown(costBreakdown.costoDirecto * 0.35).jornalAyudante.toLocaleString('es-CL')}</span></div>
+                    <div className="flex justify-between text-[#D4AF37] font-bold pt-2 border-t border-white/5"><span>Total Sugerido Pago</span><span>${calculateLaborBreakdown(costBreakdown.costoDirecto * 0.35).total.toLocaleString('es-CL')}</span></div>
                   </div>
                 </div>
               </div>
@@ -276,9 +321,15 @@ export default function Scanner() {
                   <Button variant="outline" onClick={handleWhatsAppShare} className="h-16 border-green-500/20 text-green-400 font-black rounded-2xl flex items-center justify-center gap-3">
                     <MessageSquare className="w-5 h-5" /> WHATSAPP
                   </Button>
-                  <Button variant="outline" onClick={() => setShowAR(true)} className="h-16 border-white/10 text-white font-black rounded-2xl flex items-center justify-center gap-3">
-                    <Box className="w-6 h-6" /> VER EN AR
-                  </Button>
+                  {isUnlocked ? (
+                    <Button variant="outline" onClick={exportToExcel} className="h-16 border-blue-500/20 text-blue-400 font-black rounded-2xl flex items-center justify-center gap-3">
+                      <Download className="w-5 h-5" /> EXCEL
+                    </Button>
+                  ) : (
+                    <Button variant="outline" onClick={() => setShowAR(true)} className="h-16 border-white/10 text-white font-black rounded-2xl flex items-center justify-center gap-3">
+                      <Box className="w-6 h-6" /> VER EN AR
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>

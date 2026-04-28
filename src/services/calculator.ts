@@ -147,3 +147,15 @@ export const validateAECBounds = (systemId: string | null, dims: Dimensions): st
 
   return warnings;
 };
+
+export const calculateLaborBreakdown = (totalLaborCost: number) => {
+  // Históricamente en Chile, el trato se divide: 60% para el Maestro 1ra, 40% para el Jornal/Ayudante
+  const maestro = Math.round(totalLaborCost * 0.60);
+  const jornal = Math.round(totalLaborCost * 0.40);
+  
+  return {
+    total: totalLaborCost,
+    maestroPrimera: maestro,
+    jornalAyudante: jornal
+  };
+};
