@@ -9,7 +9,6 @@ import {
   PieChart as PieIcon,
   DollarSign,
   Activity,
-  ExternalLink,
   ChevronRight
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';

@@ -11,7 +11,6 @@ import {
   LogOut,
   User as UserIcon,
   FolderOpen,
-  FolderOpen,
   Loader2,
   LayoutDashboard
 } from "lucide-react";
