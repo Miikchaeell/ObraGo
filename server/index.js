@@ -448,6 +448,10 @@ app.get('/api/admin/stats', authenticateToken, isAdmin, async (req, res) => {
             trends: monthlyRevenue
         });
     }
+    try {
+        const { rows: [stats] } = await pool.query('SELECT COUNT(*) as count FROM users');
+        const { rows: [sales] } = await pool.query('SELECT COUNT(*) as count FROM projects');
+        const { rows: [revenue] } = await pool.query('SELECT SUM(total_cost) as total FROM projects');
         const { rows: recentUsers } = await pool.query('SELECT id, email, phone, status, created_at FROM users ORDER BY created_at DESC LIMIT 5');
         const { rows: recentProjects } = await pool.query('SELECT p.*, u.email as user_email FROM projects p JOIN users u ON p.user_id = u.id ORDER BY p.date DESC LIMIT 5');
         
