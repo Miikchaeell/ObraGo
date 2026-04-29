@@ -1,7 +1,7 @@
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 
-export const generateSumaAlzadaContract = (projectName: any, costData: any, materials: any[]) => {
+export const generateSumaAlzadaContract = (projectName: string, costData: { total: number }, materials: Array<{nombre: string, cantidad: number, unidad: string, costo: number}>) => {
   try {
     const doc = new jsPDF();
     const primaryColor = [212, 175, 55]; // Gold #D4AF37
@@ -52,7 +52,7 @@ export const generateSumaAlzadaContract = (projectName: any, costData: any, mate
       headStyles: { fillColor: [15, 17, 21], textColor: [255, 255, 255] }
     });
 
-    const finalY = (doc as any).lastAutoTable.finalY + 15;
+    const finalY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 15;
 
     doc.setFont("helvetica", "bold");
     doc.setFontSize(12);

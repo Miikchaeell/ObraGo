@@ -84,7 +84,7 @@ export default function Landing() {
             transition={{ delay: 0.4 }}
             className="text-lg md:text-xl text-slate-400 font-bold max-w-2xl mx-auto"
           >
-            Toma una foto de la obra. La IA cubica, aplica normativas NCh, factores de pérdida y calcula la <span className="text-white">Cascada Comercial (CD + GG + Utilidad + IVA)</span> en 10 segundos.
+            Cubicación automatizada bajo normativa NCh, con aplicación de factores de pérdida y cálculo de <span className="text-white">Cascada Comercial</span> en segundos.
           </motion.p>
 
           <motion.div
@@ -98,16 +98,18 @@ export default function Landing() {
               onClick={() => navigate('/scanner')}
               className="w-full md:w-auto h-20 px-12 rounded-[32px] premium-button text-black text-xl font-black uppercase shadow-2xl shadow-primary/30 gap-4 group transition-all"
             >
-              Iniciar Escaneo Élite
+              Generar Auditoría de Ingeniería
               <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" />
             </Button>
-            <div className="flex flex-col items-center md:items-start text-left">
-               <p className="text-[10px] uppercase font-black tracking-widest text-slate-400">
+            <div className="flex flex-col items-center md:items-start text-left gap-1">
+               <p className="text-[10px] uppercase font-black tracking-widest text-slate-400 mb-1">
                  No requiere tarjeta de crédito
                </p>
-               <p className="text-[9px] uppercase font-bold text-slate-600">
-                 Validado bajo normas Chilenas
-               </p>
+               <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
+                 <span className="px-2 py-1 bg-green-500/10 text-green-400 border border-green-500/20 rounded-md text-[8px] font-black uppercase tracking-widest">NORMA NCh 170</span>
+                 <span className="px-2 py-1 bg-[#D4AF37]/10 text-[#D4AF37] border border-[#D4AF37]/20 rounded-md text-[8px] font-black uppercase tracking-widest">CÁLCULO AEC-CHILE</span>
+                 <span className="px-2 py-1 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-md text-[8px] font-black uppercase tracking-widest">VALIDACIÓN DE INGENIERÍA</span>
+               </div>
             </div>
           </motion.div>
         </div>
@@ -118,7 +120,7 @@ export default function Landing() {
           transition={{ duration: 2, repeat: Infinity }}
           className="absolute bottom-12 text-slate-600 flex flex-col items-center gap-2"
         >
-          <span className="text-[8px] font-black uppercase tracking-widest">Descubre el Poder de la IA</span>
+          <span className="text-[8px] font-black uppercase tracking-widest">Descubre el Motor de Auditoría Técnica</span>
           <div className="w-px h-12 bg-gradient-to-b from-slate-600 to-transparent" />
         </motion.div>
       </header>

@@ -22,30 +22,29 @@ export default function ProjectView() {
   const [scans, setScans] = useState<Array<{ id: string; elemento: string; sistema: string; total_cost: number; created_at: string; image_url?: string }>>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchProjectDetails = async () => {
-    setIsLoading(true);
-    try {
-      const token = localStorage.getItem("token");
-      const API_URL = import.meta.env.VITE_API_URL || "";
-      const res = await fetch(`${API_URL}/api/work-projects/${id}`, {
-        headers: { "Authorization": `Bearer ${token}` },
-        credentials: "include"
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setProject(data.project);
-        setScans(data.scans || []);
-      }
-    } catch (error) {
-      console.error("Error fetching project details:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   useEffect(() => {
+    const fetchProjectDetails = async () => {
+      setIsLoading(true);
+      try {
+        const token = localStorage.getItem("token");
+        const API_URL = import.meta.env.VITE_API_URL || "";
+        const res = await fetch(`${API_URL}/api/work-projects/${id}`, {
+          headers: { "Authorization": `Bearer ${token}` },
+          credentials: "include"
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setProject(data.project);
+          setScans(data.scans || []);
+        }
+      } catch (error) {
+        console.error("Error fetching project details:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
     fetchProjectDetails();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   if (isLoading) {

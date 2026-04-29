@@ -2,7 +2,7 @@
 // @ts-nocheck
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
-import { ChevronLeft, RotateCcw, Camera, Loader2, CheckCircle2, Mic, CreditCard, Share2, Zap, Download, FileText, ShieldAlert, ShieldCheck, ShoppingCart, Lock, Leaf, Droplets, Recycle, Sun, Truck, Thermometer, CloudLightning, Gavel, TrendingUp, Wallet, MessageSquare, Box } from "lucide-react";
+import { ChevronLeft, RotateCcw, Camera, Loader2, CheckCircle2, Mic, CreditCard, Share2, Zap, Download, FileText, ShieldAlert, ShieldCheck, ShoppingCart, Lock, Leaf, Droplets, Recycle, Sun, Truck, Thermometer, CloudLightning, Gavel, TrendingUp, Wallet, MessageSquare, Box, Scan } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -19,22 +19,52 @@ const generateElitePDF = async (projectName, scanResult, costBreakdown, material
     const primaryColor = [15, 17, 21]; 
     const accentColor = [212, 175, 55]; 
 
+    // Header decorativo premium
     doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.rect(0, 0, 210, 30, 'F');
+    doc.rect(0, 0, 210, 40, 'F');
     doc.setTextColor(accentColor[0], accentColor[1], accentColor[2]);
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(18);
-    doc.text("OBRA GO ELITE - REPORTE DE INGENIERÍA AEC-CHILE", 105, 18, { align: "center" });
+    doc.setFontSize(22);
+    doc.text("OBRA GO ELITE", 105, 20, { align: "center" });
+    doc.setFontSize(10);
+    doc.text("REPORTE TÉCNICO DE INGENIERÍA AEC-CHILE", 105, 28, { align: "center", charSpace: 2 });
 
+    // Watermark "CONFIDENCIAL" semi-transparente
+    doc.setTextColor(230, 230, 230);
+    doc.setFontSize(60);
+    doc.setFont("helvetica", "bold");
+    // jsPDF GState para transparencia
+    const gState = (doc as any).GState ? new (doc as any).GState({ opacity: 0.1 }) : null;
+    if (gState) (doc as any).setGState(gState);
+    doc.text("CONFIDENCIAL", 40, 150, { angle: 45 });
+    doc.text("USO EXCLUSIVO AEC", 30, 200, { angle: 45 });
+    if (gState) (doc as any).setGState((doc as any).GState({ opacity: 1.0 }));
+
+    // Datos del Proyecto
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(10);
-    doc.text(`PROYECTO: ${projectName?.toUpperCase() || "SIN NOMBRE"}`, 15, 40);
-    doc.text(`PARTIDA MAESTRA: ${scanResult?.partida || "CUBICACIÓN AEC"}`, 15, 46);
-    doc.text(`FECHA: ${new Date().toLocaleDateString()}`, 15, 52);
+    doc.setFont("helvetica", "bold");
+    doc.text("DETALLES DEL PROYECTO", 15, 55);
+    doc.setDrawColor(200, 200, 200);
+    doc.line(15, 57, 195, 57);
+    
+    doc.setFont("helvetica", "normal");
+    doc.text(`PROYECTO:`, 15, 65);
+    doc.setFont("helvetica", "bold");
+    doc.text(`${projectName?.toUpperCase() || "SIN NOMBRE"}`, 45, 65);
+    
+    doc.setFont("helvetica", "normal");
+    doc.text(`PARTIDA:`, 15, 71);
+    doc.setFont("helvetica", "bold");
+    doc.text(`${scanResult?.partida || "CUBICACIÓN AEC"}`, 45, 71);
+    
+    doc.setFont("helvetica", "normal");
+    doc.text(`EMISIÓN:`, 15, 77);
+    doc.text(`${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`, 45, 77);
 
     // APU DETALLADO POR PARTIDA
     autoTable(doc, {
-      startY: 60,
+      startY: 85,
       head: [['MATERIAL / RECURSO', 'CANTIDAD (INC. PÉRDIDA)', 'UND', 'PRECIO UNIT.', 'TOTAL']],
       body: materials.map(m => [
         m.name, 
@@ -43,47 +73,60 @@ const generateElitePDF = async (projectName, scanResult, costBreakdown, material
         `$${m.price.toLocaleString('es-CL')}`, 
         `$${m.total.toLocaleString('es-CL')}`
       ]),
-      theme: 'grid',
-      headStyles: { fillColor: primaryColor, textColor: accentColor },
-      styles: { fontSize: 8 }
+      theme: 'striped',
+      headStyles: { fillColor: primaryColor, textColor: accentColor, fontStyle: 'bold' },
+      styles: { fontSize: 8, cellPadding: 3 },
+      columnStyles: {
+        0: { cellWidth: 80 },
+        4: { halign: 'right', fontStyle: 'bold' }
+      }
     });
 
+    // CASCADA COMERCIAL (TABLA ELEGANTE)
     const cascadeY = (doc as any).lastAutoTable.finalY + 15;
     doc.setFontSize(11);
     doc.setFont("helvetica", "bold");
-    doc.text("CASCADA COMERCIAL AEC-CHILE", 15, cascadeY);
+    doc.text("CASCADA COMERCIAL E IMPUESTOS", 15, cascadeY);
     
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    doc.text(`1. COSTO DIRECTO (CD): $${costBreakdown.costoDirecto.toLocaleString('es-CL')}`, 15, cascadeY + 8);
-    doc.text(`2. GASTOS GENERALES (12%): $${costBreakdown.gg.toLocaleString('es-CL')}`, 15, cascadeY + 14);
-    doc.text(`3. UTILIDAD (15%): $${costBreakdown.profit.toLocaleString('es-CL')}`, 15, cascadeY + 20);
-    doc.setTextColor(200, 0, 0);
-    doc.text(`4. IVA (19%): $${costBreakdown.iva.toLocaleString('es-CL')}`, 15, cascadeY + 26);
-    
-    doc.setTextColor(0, 0, 0);
-    doc.setFontSize(14);
-    doc.setFont("helvetica", "bold");
-    doc.text(`TOTAL FINAL REPORTE: $${costBreakdown.total.toLocaleString('es-CL')}`, 15, cascadeY + 40);
+    autoTable(doc, {
+      startY: cascadeY + 5,
+      body: [
+        ['1. COSTO DIRECTO (CD)', `$${costBreakdown.costoDirecto.toLocaleString('es-CL')}`],
+        ['2. GASTOS GENERALES (12%)', `$${costBreakdown.gg.toLocaleString('es-CL')}`],
+        ['3. UTILIDAD (15%)', `$${costBreakdown.profit.toLocaleString('es-CL')}`],
+        ['4. IVA (19%)', `$${costBreakdown.iva.toLocaleString('es-CL')}`],
+        [{ content: 'TOTAL PRESUPUESTO ESTIMADO', styles: { fillColor: accentColor, textColor: [0,0,0], fontStyle: 'bold', fontSize: 12 } }, 
+         { content: `$${costBreakdown.total.toLocaleString('es-CL')}`, styles: { fillColor: accentColor, textColor: [0,0,0], fontStyle: 'bold', fontSize: 12, halign: 'right' } }]
+      ],
+      theme: 'plain',
+      styles: { fontSize: 10, cellPadding: 4 },
+      columnStyles: {
+        1: { halign: 'right' }
+      }
+    });
+
+    const footerY = (doc as any).lastAutoTable.finalY + 20;
 
     if (userSignature) {
-      doc.addImage(userSignature, 'PNG', 15, 250, 40, 15);
+      doc.addImage(userSignature, 'PNG', 15, footerY > 240 ? 240 : footerY, 40, 15);
       doc.setFontSize(7);
-      doc.text("FIRMA RESPONSABLE AEC", 15, 268);
+      doc.setFont("helvetica", "bold");
+      doc.text("FIRMA RESPONSABLE AEC", 15, (footerY > 240 ? 240 : footerY) + 18);
     }
 
-    // DISCLAIMER LEGAL V21.2
+    // FOOTER REFORZADO AEC
     doc.setFontSize(7);
     doc.setTextColor(150, 150, 150);
-    doc.text("DESCARGO DE RESPONSABILIDAD: Este reporte es una estimación técnica basada en parámetros AEC-CHILE. Los precios referenciales tienen una validez de 5 días hábiles desde su emisión.", 105, 285, { align: "center", maxWidth: 180 });
-
-    // MOTOR DE REFERIDOS V21.4
+    doc.text("ESTE DOCUMENTO ES UNA AUDITORÍA TÉCNICA CERTIFICADA POR EL MOTOR OBRA GO. VALIDEZ DE PRECIOS: 5 DÍAS HÁBILES.", 105, 282, { align: "center" });
+    
+    doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.rect(0, 285, 210, 15, 'F');
+    doc.setTextColor(accentColor[0], accentColor[1], accentColor[2]);
     doc.setFontSize(8);
-    doc.setTextColor(212, 175, 55); // Dorado
-    doc.text("¿Te sirvió este presupuesto? Recomienda ObraGo a un colega y obtén un mes de Plan Pro gratis.", 105, 292, { align: "center", maxWidth: 180 });
+    doc.text("WWW.OBRAGO.CL - INGENIERÍA CIVIL AEC-CHILE V22.0", 105, 294, { align: "center", charSpace: 1 });
 
     doc.save(`Reporte_Elite_AEC_${projectName || 'Obra'}.pdf`);
-  } catch (e) { console.error(e); }
+  } catch (e) { console.error("Error generando PDF Elite:", e); }
 };
 
 export default function Scanner() {

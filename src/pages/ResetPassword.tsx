@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
@@ -11,13 +11,7 @@ export default function ResetPassword() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    if (!token) {
-      setError("Token de recuperación no encontrado o inválido");
-    }
-  }, [token]);
+  const [error, setError] = useState(!token ? "Token de recuperación no encontrado o inválido" : "");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

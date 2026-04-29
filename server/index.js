@@ -23,6 +23,7 @@ process.on('unhandledRejection', (err) => {
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import multer from 'multer';
 import OpenAI from 'openai';
 import fs from 'fs';
@@ -201,6 +202,26 @@ if (hasDBConfig || isProduction) {
 }
 
 const app = express();
+
+// [v17.0] Blindaje de Seguridad: Rate Limiting
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 5, // Límite de 5 intentos
+  message: { error: "Demasiados intentos. Por favor, intenta de nuevo en 15 minutos por seguridad técnica." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100, // Límite general de 100 peticiones por ventana
+  message: { error: "Límite de peticiones de ingeniería alcanzado. Intenta más tarde." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Aplicar limitador general a toda la API
+app.use('/api/', apiLimiter);
 
 // [v12.0] Protocolo de Seguridad Nivel 2: Blindaje Industrial
 app.use(helmet({
@@ -466,7 +487,7 @@ app.post('/api/voice-assistant', authenticateToken, async (req, res) => {
         const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
         const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-        const systemPrompt = `Eres el Copiloto Normativo de ObraGo. Tu nombre es Michael (IA).
+        const systemPrompt = `Eres el Copiloto Normativo de ObraGo. Tu nombre es Michael (Motor de Auditoría Técnica).
         Eres un Ingeniero Civil Senior experto en Normativa Chilena (NCh 430, NCh 170, NCh 433, etc.).
         
         INSTRUCCIONES:
@@ -522,7 +543,7 @@ app.post('/api/chat/support', upload.single('image'), async (req, res) => {
         
         REGLAS COMERCIALES Y DE TONO:
         5. Contexto de Obra: Tienes acceso al presupuesto dinámico del usuario, que actualmente es de $${Number(totalCost).toLocaleString('es-CL')} CLP.
-        6. Tono: Chileno, extremadamente profesional, socio de confianza. No eres una IA, eres un colega experto ("maestro", "jefe").
+        6. Tono: Chileno, extremadamente profesional, socio de confianza. No eres una IA, eres un colega experto ("maestro", "jefe"). Nunca digas "Estoy usando IA" o "Soy un Robot", di en su lugar: "Estoy procesando los datos técnicos de tu obra para asegurar el cumplimiento normativo."
         7. Venta: Si el usuario tiene dudas sobre cubicaciones exactas, dile que el Reporte Élite contiene el APU (Análisis de Precios Unitarios), rendimiento de mano de obra y la Cascada Comercial (CD + GG 12% + Utilidad 15% + IVA 19%).
         8. Botón de Pago: Si detectas que el usuario está muy confundido o pide el desglose total, incluye la palabra clave [SHOW_PAYMENT_BUTTON] en tu respuesta.`;
 
@@ -572,7 +593,7 @@ app.post('/api/chat/support', upload.single('image'), async (req, res) => {
 app.get('/', (req, res) => res.send('ObraGo Backend Stable Live'));
 
 // AUTH
-app.post('/api/auth/register', async (req, res) => {
+app.post('/api/auth/register', authLimiter, async (req, res) => {
   const { email, password } = req.body;
 
   // [v7.0] Mock Registration (Offline Mode)
@@ -648,7 +669,7 @@ app.post('/api/feedback/correction', authenticateToken, async (req, res) => {
   }
 });
 
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/login', authLimiter, async (req, res) => {
   const { phone, password } = req.body; // Cambiado de email a phone
 
   // [v19.0] SMS Login + Email Identity Verification (Offline Mode)
