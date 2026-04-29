@@ -21,11 +21,10 @@ export default function Landing() {
     <div className="min-h-screen bg-[#000000] text-white font-sans selection:bg-primary selection:text-black">
       {/* Top Navigation Bar */}
       <nav className="fixed top-0 left-0 right-0 z-[100] px-6 py-8 flex justify-between items-center bg-gradient-to-b from-black/80 to-transparent backdrop-blur-sm">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-black border border-primary/20 rounded-lg flex items-center justify-center">
-            <img src="/obrago-gold-logo.jpg" className="w-full h-full object-cover" alt="O" />
+        <div className="flex items-center gap-3">
+          <div className="h-8 flex items-center justify-center">
+            <img src="/logo-dark.svg" className="h-full object-contain" alt="ObraGo Pro" />
           </div>
-          <span className="text-xs font-black tracking-[0.2em] uppercase">Obra Go</span>
         </div>
         <div className="flex items-center gap-6">
           <button 

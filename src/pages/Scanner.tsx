@@ -22,12 +22,15 @@ const generateElitePDF = async (projectName, scanResult, costBreakdown, material
     // Header decorativo premium
     doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
     doc.rect(0, 0, 210, 40, 'F');
-    doc.setTextColor(accentColor[0], accentColor[1], accentColor[2]);
+    doc.setTextColor(255, 255, 255);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(22);
-    doc.text("OBRA GO ELITE", 105, 20, { align: "center" });
+    doc.text("OBRAGO", 90, 20, { align: "right" });
+    doc.setTextColor(249, 115, 22); // Naranja PRO
+    doc.text("PRO", 92, 20, { align: "left" });
+    doc.setTextColor(accentColor[0], accentColor[1], accentColor[2]);
     doc.setFontSize(10);
-    doc.text("REPORTE TÉCNICO DE INGENIERÍA AEC-CHILE", 105, 28, { align: "center", charSpace: 2 });
+    doc.text("REPORTE TÉCNICO DE INGENIERÍA AEC-CHILE V22.0", 105, 28, { align: "center", charSpace: 1 });
 
     // Watermark "CONFIDENCIAL" semi-transparente
     doc.setTextColor(230, 230, 230);

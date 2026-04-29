@@ -16,11 +16,12 @@ export const createPaymentPreference = async (userId, userEmail, projectName) =>
             body: {
                 items: [
                     {
-                        id: 'reporte-elite',
-                        title: 'Obra Go - Reporte Élite de Ingeniería',
+                        id: 'reporte-pro',
+                        title: 'ObraGo Pro - Reporte Élite de Ingeniería',
                         quantity: 1,
                         unit_price: 2990,
                         currency_id: 'CLP',
+                        picture_url: 'https://obrascan.vercel.app/logo-full.svg'
                     }
                 ],
                 payer: {

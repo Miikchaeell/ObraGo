@@ -102,8 +102,8 @@ export default function Dashboard() {
         <header className="p-6 space-y-6">
           <div className="flex justify-between items-center bg-card/80 backdrop-blur-xl border border-white/5 p-4 rounded-[32px] shadow-2xl">
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 bg-black rounded-2xl flex items-center justify-center shadow-2xl p-0.5 overflow-hidden border border-primary/20 group">
-                <img src="/obrago-gold-logo.jpg" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt="Obra Go Gold" />
+              <div className="w-14 h-14 bg-transparent rounded-2xl flex items-center justify-center p-0.5 overflow-hidden group">
+                <img src="/logo-dark.svg" className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-110" alt="ObraGo Pro Official" />
               </div>
               <div className="flex flex-col">
                 <h1 className="text-xl font-black italic tracking-tighter uppercase text-white leading-none">
