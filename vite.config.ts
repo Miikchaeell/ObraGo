@@ -15,20 +15,15 @@ export default defineConfig({
         enabled: true
       },
       manifest: {
-        name: 'ObraGo Elite AEC',
-        short_name: 'ObraGo',
-        description: 'Motor de Ingeniería AEC',
-        theme_color: '#0f1115',
-        background_color: '#0f1115',
+        name: 'ObraGo Pro - Inteligencia AEC',
+        short_name: 'ObraGo Pro',
+        description: 'Motor de Ingeniería AEC V22.0',
+        theme_color: '#000000',
+        background_color: '#000000',
         display: 'standalone',
         icons: [
           {
-            src: 'logo-192.png',
-            sizes: '192x192',
-            type: 'image/png'
-          },
-          {
-            src: 'logo-512.png',
+            src: 'favicon.png',
             sizes: '512x512',
             type: 'image/png'
           }
