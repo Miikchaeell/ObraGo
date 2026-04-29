@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "concurrently \"vite\" \"node server/index.js\"",
     "build": "tsc -b && vite build",
+    "db:backup": "node server/services/backup.js",
     "lint": "eslint .",
     "preview": "vite preview"
   },

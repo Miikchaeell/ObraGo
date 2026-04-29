@@ -24,6 +24,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import { body, validationResult } from 'express-validator';
 import multer from 'multer';
 import OpenAI from 'openai';
 import fs from 'fs';
@@ -222,6 +223,14 @@ const apiLimiter = rateLimit({
 
 // Aplicar limitador general a toda la API
 app.use('/api/', apiLimiter);
+
+// [v22.0] Blindaje de Protocolo: Forzar HTTPS en Producción
+app.use((req, res, next) => {
+  if (isProduction && req.headers['x-forwarded-proto'] !== 'https') {
+    return res.redirect(`https://${req.get('host')}${req.url}`);
+  }
+  next();
+});
 
 // [v12.0] Protocolo de Seguridad Nivel 2: Blindaje Industrial
 app.use(helmet({
@@ -485,7 +494,7 @@ app.post('/api/voice-assistant', authenticateToken, async (req, res) => {
 
     try {
         const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
 
         const systemPrompt = `Eres el Copiloto Normativo de ObraGo, operando bajo el Cerebro Nexus V22.0. Tu nombre es Michael.
         Eres un Ingeniero Civil Senior experto en Normativa Chilena (NCh 430, NCh 170, NCh 433, etc.).
@@ -523,7 +532,7 @@ app.post('/api/chat/support', upload.single('image'), async (req, res) => {
 
     try {
         const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
 
         const engineerName = metadata?.assignedEngineer || 'Michael';
         const engineerRole = metadata?.engineerRole || 'Ingeniero Senior AEC';
@@ -593,8 +602,15 @@ app.post('/api/chat/support', upload.single('image'), async (req, res) => {
 app.get('/', (req, res) => res.send('ObraGo Backend Stable Live'));
 
 // AUTH
-app.post('/api/auth/register', authLimiter, async (req, res) => {
-  const { email, password } = req.body;
+app.post('/api/auth/register', 
+  authLimiter,
+  body('email').isEmail().normalizeEmail(),
+  body('password').isLength({ min: 6 }),
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+    
+    const { email, password } = req.body;
 
   // [v7.0] Mock Registration (Offline Mode)
   if (!isProduction && !hasDBConfig) {
@@ -669,8 +685,15 @@ app.post('/api/feedback/correction', authenticateToken, async (req, res) => {
   }
 });
 
-app.post('/api/auth/login', authLimiter, async (req, res) => {
-  const { phone, password } = req.body; // Cambiado de email a phone
+app.post('/api/auth/login', 
+  authLimiter,
+  body('phone').trim().escape(),
+  body('password').notEmpty(),
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+
+    const { phone, password } = req.body; // Cambiado de email a phone
 
   // [v19.0] SMS Login + Email Identity Verification (Offline Mode)
   if (!isProduction && !hasDBConfig) {
