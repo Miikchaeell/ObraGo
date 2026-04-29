@@ -7,7 +7,10 @@ import {
   ArrowLeft,
   TrendingUp,
   PieChart as PieIcon,
-  DollarSign
+  DollarSign,
+  Activity,
+  ExternalLink,
+  ChevronRight
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -47,6 +50,8 @@ interface AdminStats {
   heatmap: { commune: string; activity: number }[];
   systems: { name: string; value: number }[];
   trends: { month: string; amount: number }[];
+  recentUsers: { id: string; email: string; phone: string; status: string; created_at: string }[];
+  recentProjects: { id: string; elemento: string; user_email: string; total_cost: number; date: string }[];
 }
 
 export default function Admin() {
@@ -218,6 +223,61 @@ export default function Admin() {
                   </div>
                 ))}
               </div>
+            </div>
+          </section>
+        </div>
+
+        {/* Recent Activity Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Recent Users */}
+          <section className="bg-[#0f1115] border border-white/5 rounded-[48px] p-10 space-y-8 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-green-500/10 rounded-xl flex items-center justify-center text-green-500">
+                  <Activity className="w-4 h-4" />
+                </div>
+                <h2 className="text-lg font-black uppercase italic tracking-tighter">Usuarios Recientes</h2>
+              </div>
+            </div>
+            <div className="space-y-4">
+              {stats?.recentUsers.map((user, i) => (
+                <div key={i} className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 hover:border-[#D4AF37]/30 transition-all group">
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-black text-white uppercase">{user.email}</p>
+                    <p className="text-[8px] font-bold text-slate-500">{user.phone || 'Sin teléfono'} • {new Date(user.created_at).toLocaleDateString()}</p>
+                  </div>
+                  <div className={`px-2 py-1 rounded-md text-[8px] font-black uppercase ${user.status === 'approved' ? 'bg-green-500/10 text-green-500' : 'bg-yellow-500/10 text-yellow-500'}`}>
+                    {user.status}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* Recent Audits */}
+          <section className="bg-[#0f1115] border border-white/5 rounded-[48px] p-10 space-y-8 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-purple-500/10 rounded-xl flex items-center justify-center text-purple-500">
+                  <CreditCard className="w-4 h-4" />
+                </div>
+                <h2 className="text-lg font-black uppercase italic tracking-tighter">Últimas Auditorías</h2>
+              </div>
+            </div>
+            <div className="space-y-4">
+              {stats?.recentProjects.map((project, i) => (
+                <div 
+                  key={i} 
+                  onClick={() => navigate(`/projects/${project.id}`)}
+                  className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 hover:border-primary/30 transition-all cursor-pointer group"
+                >
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-black text-white uppercase">{project.elemento}</p>
+                    <p className="text-[8px] font-bold text-slate-500">{project.user_email} • ${Number(project.total_cost).toLocaleString('es-CL')}</p>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-slate-600 group-hover:text-primary transition-all" />
+                </div>
+              ))}
             </div>
           </section>
         </div>

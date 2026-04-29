@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 interface User {
   id: string;
   email: string;
+  role?: string;
 }
 
 interface AuthContextType {

@@ -11,7 +11,9 @@ import {
   LogOut,
   User as UserIcon,
   FolderOpen,
-  Loader2
+  FolderOpen,
+  Loader2,
+  LayoutDashboard
 } from "lucide-react";
 import { AdSenseSlot } from "@/components/AdSenseSlot";
 import { Button } from "@/components/ui/button";
@@ -111,6 +113,15 @@ export default function Dashboard() {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              {user?.role === 'admin' && (
+                <button 
+                  onClick={() => navigate('/admin')} 
+                  className="p-3 bg-primary/10 border border-primary/20 rounded-xl text-primary hover:bg-primary/20 transition-all"
+                  title="BI HUB CEO"
+                >
+                  <LayoutDashboard className="w-5 h-5" />
+                </button>
+              )}
               <button onClick={logout} aria-label="support" title="Cerrar Sesión" className="p-3 bg-secondary/50 border border-border rounded-xl text-muted-foreground hover:text-destructive transition-all">
                 <LogOut className="w-5 h-5" />
               </button>

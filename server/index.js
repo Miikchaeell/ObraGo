@@ -441,21 +441,23 @@ app.get('/api/admin/stats', authenticateToken, isAdmin, async (req, res) => {
             totalUsers: 42,
             totalSales: data.scans.length,
             totalRevenue: data.scans.reduce((sum, s) => sum + (s.total_cost || 0), 0),
+            recentUsers: data.users.slice(-5).reverse(),
+            recentProjects: data.scans.slice(-5).reverse().map(s => ({ ...s, user_email: "mock@user.cl" })),
             heatmap: heatmap.slice(0, 5),
             systems: Object.entries(systems).map(([name, value]) => ({ name, value })),
             trends: monthlyRevenue
         });
     }
-    try {
-        const { rows: [stats] } = await pool.query('SELECT COUNT(*) as count FROM users');
-        const { rows: [sales] } = await pool.query('SELECT COUNT(*) as count FROM projects');
-        const { rows: [revenue] } = await pool.query('SELECT SUM(total_cost) as total FROM projects');
+        const { rows: recentUsers } = await pool.query('SELECT id, email, phone, status, created_at FROM users ORDER BY created_at DESC LIMIT 5');
+        const { rows: recentProjects } = await pool.query('SELECT p.*, u.email as user_email FROM projects p JOIN users u ON p.user_id = u.id ORDER BY p.date DESC LIMIT 5');
         
         res.json({
             success: true,
             totalUsers: parseInt(stats.count),
             totalSales: parseInt(sales.count),
             totalRevenue: parseFloat(revenue.total || 0),
+            recentUsers,
+            recentProjects,
             heatmap: [{ commune: "Santiago", activity: 15 }, { commune: "Maipú", activity: 8 }],
             systems: [{ name: "Radier", value: 12 }, { name: "Muro", value: 5 }],
             trends: [
