@@ -1,7 +1,7 @@
 {
-  "name": "Obra Go - Scanner Inteligente",
-  "short_name": "Obra Go",
-  "description": "IA para cubicación y presupuestos de construcción en terreno.",
+  "name": "ObraGo Pro - Inteligencia AEC",
+  "short_name": "ObraGo Pro",
+  "description": "IA para cubicación y auditoría técnica de ingeniería en terreno.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#000000",
@@ -9,13 +9,13 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "/logo-192.png",
-      "sizes": "192x192",
+      "src": "/logo-1024.png",
+      "sizes": "1024x1024",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/logo-512.png",
+      "src": "/favicon.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"

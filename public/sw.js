@@ -1,19 +1,18 @@
-const CACHE_NAME = 'obrago-v4'; // Bumping to v4 for safety
+const CACHE_NAME = 'obrago-pro-v22'; // Branding & Hardening Update
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/logo-192.png',
-  '/logo-512.png',
-  '/apple-touch-icon.png',
-  '/obrago-gold-logo.jpg'
+  '/logo-full.svg',
+  '/logo-dark.svg',
+  '/favicon.svg'
 ];
 
 // Install Event
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('SW: Pre-caching critical assets v4 (Chat Purge)');
+      console.log('SW: Pre-caching critical assets v22 (ObraGo Pro Definitive)');
       return cache.addAll(ASSETS_TO_CACHE);
     })
   );
