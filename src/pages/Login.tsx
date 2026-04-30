@@ -70,13 +70,13 @@ export default function Login() {
         <div className="flex flex-col items-center mb-12">
           <div className="w-24 h-24 bg-black rounded-[2.5rem] flex items-center justify-center shadow-2xl p-0.5 overflow-hidden border border-primary/20 mb-6 group">
             <img 
-              src="/obrago-gold-logo.jpg" 
-              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
-              alt="ObraGo Gold" 
+              src="/logo-full.svg" 
+              className="w-full h-full object-contain transition-transform duration-700 group-hover:scale-110" 
+              alt="ObraGoPRO" 
             />
           </div>
           <h1 className="text-4xl font-black italic tracking-tighter uppercase text-white leading-none">
-            OBRA<span className="text-primary">GO</span>
+            ObraGo<span className="text-primary">PRO</span>
           </h1>
           <div className="flex items-center gap-2 mt-2">
             <span className="text-[10px] font-bold text-primary/60 uppercase tracking-[0.4em]">Proptech Intelligence</span>
@@ -95,7 +95,7 @@ export default function Login() {
               <div className="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 border border-primary/20 rounded-full">
                 <ShieldCheck className="w-3 h-3 text-primary" />
                 <span className="text-[9px] font-black text-primary uppercase tracking-widest">
-                  {mfaStep ? "Identidad por Email" : "Login por SMS"}
+                  {mfaStep ? "Google Authenticator PRO" : "Acceso Senior PRO"}
                 </span>
               </div>
             </div>
@@ -193,7 +193,7 @@ export default function Login() {
         {/* Footer */}
         <footer className="mt-12 text-center space-y-4">
           <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">
-            © 2026 Obra Go • San Fernando, Chile
+            © 2026 ObraGoPRO • San Fernando, Chile
           </p>
         </footer>
       </motion.div>

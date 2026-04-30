@@ -30,7 +30,7 @@ export default function Landing() {
       <nav className="fixed top-0 left-0 right-0 z-[100] px-6 py-8 flex justify-between items-center transition-all duration-300">
         <div className="flex items-center gap-3">
           <div className="h-10 flex items-center justify-center">
-            <img src="/logo-dark.svg" className="h-full object-contain" alt="ObraGo Pro" />
+            <img src="/logo-dark.svg" className="h-full object-contain" alt="ObraGoPRO" />
           </div>
         </div>
         <div className="flex items-center gap-4">
@@ -197,7 +197,7 @@ export default function Landing() {
             onClick={() => navigate('/scanner')} 
             className="h-20 px-16 rounded-full bg-black text-primary hover:bg-slate-900 transition-all text-2xl font-black uppercase italic tracking-tighter relative z-20 shadow-2xl"
           >
-            Generar Auditoría Ahora
+            Probar Scanner Ahora
           </Button>
         </div>
       </section>
@@ -205,7 +205,7 @@ export default function Landing() {
       {/* Footer */}
       <footer className="py-12 px-6 text-center border-t border-white/5 bg-black">
         <p className="text-[10px] font-black uppercase text-slate-700 tracking-[0.4em]">
-          ObraGo Pro Chile © 2026 • Inteligencia AEC de Vanguardia
+          ObraGoPRO Chile © 2026 • Inteligencia AEC de Vanguardia
         </p>
       </footer>
     </div>

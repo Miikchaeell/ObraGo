@@ -7,33 +7,33 @@ import { AdSenseSlot } from "@/components/AdSenseSlot";
 
 const plans = [
   {
-    name: "Contratista",
+    name: "Contratista Élite",
     planType: "basic",
-    price: "$29.990",
-    period: "/mes",
-    features: ["Acceso a la app", "5 escaneos gratuitos al mes", "Descarga de PDF básico"],
-    buttonText: "Elegir Contratista",
-    priceId: "price_basic_id",
+    price: "$9.990",
+    period: "/auditoría",
+    features: ["1 Reporte Élite Full", "Cubicación NCh 170", "Validación IA Nexus", "Descarga PDF Inmediata"],
+    buttonText: "Comprar Ahora",
+    priceId: "plan_9990",
     highlight: false
   },
   {
-    name: "Constructora Pro",
+    name: "Constructora PRO",
     planType: "pro",
-    price: "$89.990",
+    price: "$24.990",
     period: "/mes",
-    features: ["Escaneos ilimitados", "Auditoría NCh activa", "Historial ilimitado", "APU completo en PDF", "Soporte prioritario"],
-    buttonText: "Elegir Pro",
-    priceId: "price_pro_id",
+    features: ["5 Reportes Élite/mes", "Auditoría de Ingeniería Pro", "Soporte Senior Directo", "Acceso a BI HUB CEO"],
+    buttonText: "Elegir PRO",
+    priceId: "plan_24990",
     highlight: true
   },
   {
-    name: "Corporativo",
+    name: "Corporativo Industrial",
     planType: "enterprise",
-    price: "$249.990",
+    price: "$59.990",
     period: "/mes",
-    features: ["Módulo de Logo Personalizado", "Acceso multi-usuario", "Proyectos Gran Escala (> $50M)", "Integración API"],
-    buttonText: "Contactar Ventas",
-    priceId: "price_enterprise_id",
+    features: ["Auditorías Ilimitadas", "Multi-usuario Empresa", "API Integration", "Logo Personalizado en PDF"],
+    buttonText: "Activar Corp",
+    priceId: "plan_59990",
     highlight: false
   }
 ];

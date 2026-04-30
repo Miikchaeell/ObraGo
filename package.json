@@ -3,6 +3,9 @@
   "private": true,
   "version": "22.0.1",
   "type": "module",
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "scripts": {
     "dev": "concurrently \"vite\" \"node server/index.js\"",
     "build": "tsc -b && vite build",

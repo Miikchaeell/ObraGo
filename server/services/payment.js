@@ -8,7 +8,7 @@ const client = new MercadoPagoConfig({
     options: { timeout: 5000 }
 });
 
-export const createPaymentPreference = async (userId, userEmail, projectName) => {
+export const createPaymentPreference = async (userId, userEmail, projectName, amount = 9990) => {
     const preference = new Preference(client);
     
     try {
@@ -16,10 +16,10 @@ export const createPaymentPreference = async (userId, userEmail, projectName) =>
             body: {
                 items: [
                     {
-                        id: 'reporte-pro',
-                        title: 'ObraGo Pro - Reporte Élite de Ingeniería',
+                        id: 'reporte-elite',
+                        title: 'ObraGoPRO - Reporte Élite de Ingeniería',
                         quantity: 1,
-                        unit_price: 2990,
+                        unit_price: amount,
                         currency_id: 'CLP',
                         picture_url: 'https://obrascan.vercel.app/logo-full.svg'
                     }
@@ -27,7 +27,7 @@ export const createPaymentPreference = async (userId, userEmail, projectName) =>
                 payer: {
                     email: userEmail
                 },
-                statement_descriptor: "OBRA GO",
+                statement_descriptor: "OBRAGOPRO",
                 integrator_id: "dev_24c65dbd1ad711ea82820242ac130004", // ID de Integrador MP Chile
                 back_urls: {
                     success: `${process.env.VITE_FRONTEND_URL || 'http://localhost:5555'}/scanner?status=approved`,
