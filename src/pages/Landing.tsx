@@ -118,10 +118,10 @@ export default function Landing() {
                 />
               </div>
               <Button 
-                onClick={() => navigate('/scanner')} 
+                onClick={() => navigate('/mission-control')} 
                 className="w-full md:w-auto h-16 px-10 rounded-[24px] bg-primary text-black font-black uppercase italic tracking-tighter text-lg shadow-2xl hover:scale-105 transition-all"
               >
-                Probar Scanner Ahora
+                Entrar a Mission Control
               </Button>
             </motion.div>
           </motion.div>
@@ -207,10 +207,10 @@ export default function Landing() {
           </div>
 
           <Button 
-            onClick={() => navigate('/scanner')} 
+            onClick={() => navigate('/mission-control')} 
             className="h-20 px-16 rounded-full bg-primary text-black hover:bg-white transition-all text-2xl font-black uppercase italic tracking-tighter relative z-20 shadow-2xl"
           >
-            Probar Scanner Ahora
+            Acceder a Mission Control
           </Button>
         </div>
       </section>

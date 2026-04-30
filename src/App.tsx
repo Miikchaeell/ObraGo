@@ -13,6 +13,7 @@ import Admin from "@/pages/Admin";
 import Dashboard from "@/pages/Dashboard";
 import ProjectView from "@/pages/ProjectView";
 import Landing from "@/pages/Landing";
+import MissionControl from "@/pages/MissionControl";
 import { useAuth } from "@/context/AuthContext";
 
 const ProtectedRoute = ({ children, allowGuest = false }: { children: React.ReactNode, allowGuest?: boolean }) => {
@@ -43,6 +44,7 @@ function App() {
           <Route path="/scanner" element={<ProtectedRoute allowGuest={true}><Scanner /></ProtectedRoute>} />
           <Route path="/history" element={<ProtectedRoute><History /></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+          <Route path="/mission-control" element={<ProtectedRoute><MissionControl /></ProtectedRoute>} />
           
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
