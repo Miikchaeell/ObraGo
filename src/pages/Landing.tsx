@@ -91,6 +91,18 @@ export default function Landing() {
         </div>
       </header>
 
+      {/* Authority Infinite Slider */}
+      <section className="py-20 border-y border-white/5 overflow-hidden bg-[#050505]">
+        <div className="flex gap-10 animate-infinite-scroll">
+          {[...useCases, ...useCases].map((item, idx) => (
+            <div key={idx} className="min-w-[400px] p-8 border border-white/5 bg-[#080808] rounded-sm space-y-2">
+              <h5 className="font-black uppercase italic tracking-tighter text-lg">{item.title}</h5>
+              <p className="text-[10px] text-slate-500 font-bold uppercase">{item.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
       <section className="py-40 px-10 bg-[#0a0a0a]">
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-24 items-center">
           <div className="space-y-10">
@@ -103,6 +115,26 @@ export default function Landing() {
              <Camera className="w-20 h-20 text-[#D4AF37] opacity-20" />
              <p className="text-[10px] font-black uppercase tracking-[0.4em] text-white/40">Vision AI AEC Engine V22.2</p>
           </div>
+        </div>
+      </section>
+
+      {/* Module Ecosystem */}
+      <section className="py-40 px-10 max-w-7xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+          {[
+            { id: 'focus', title: 'ObraFocus', desc: 'Radar de licitaciones Mercado Público 24/7.', icon: Search },
+            { id: 'control', title: 'ObraControl', desc: 'Control de estados de pago y margen.', icon: BarChart3 },
+            { id: 'avan', title: 'ObraAvan', desc: 'Reportabilidad GPS y validación biométrica.', icon: Activity },
+            { id: 'security', title: 'ObraSegurity', desc: 'Estándar ZYGHT automatizado.', icon: Shield },
+            { id: 'study', title: 'ObraStudy', desc: 'BIM & Critical Path Mastermind.', icon: Layers },
+            { id: 'plan', title: 'ObraPlan', desc: 'Planificación estratégica de recursos.', icon: Factory }
+          ].map((mod) => (
+            <div key={mod.id} className="p-10 border border-white/5 bg-[#0a0a0a] space-y-6 group hover:border-[#D4AF37]/20 transition-all">
+              <div className="text-[#D4AF37]"><mod.icon className="w-8 h-8" /></div>
+              <h4 className="text-xl font-black italic tracking-tighter uppercase">{mod.title}</h4>
+              <p className="text-[10px] text-slate-500 font-bold uppercase leading-relaxed">{mod.desc}</p>
+            </div>
+          ))}
         </div>
       </section>
 
