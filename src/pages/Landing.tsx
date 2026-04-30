@@ -48,6 +48,9 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen bg-[#080808] text-[#F2F2F2] font-sans selection:bg-[#D4AF37] selection:text-black overflow-x-hidden">
+      <div className="fixed top-0 left-0 w-full h-10 bg-red-600 z-[9999] flex items-center justify-center text-white font-black text-xs">
+        RENDER TEST ACTIVE - V22.2.1-X.1
+      </div>
       
       {/* 1. Header Minimalista de Autoridad */}
       <nav className="fixed top-0 left-0 right-0 z-[100] px-10 py-8 flex justify-between items-center transition-all duration-500">
