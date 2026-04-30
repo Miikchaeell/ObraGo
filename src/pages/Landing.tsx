@@ -89,7 +89,7 @@ export default function Landing() {
             playsInline
             className="absolute inset-0 w-full h-full object-cover opacity-30 grayscale"
           >
-            <source src="/videos/obragopro-v22-2.mp4" type="video/mp4" />
+            <source src="/videos/obragopro-v22-2-X.mp4" type="video/mp4" />
           </video>
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#080808]/80 to-[#080808] z-10" />
         </div>
