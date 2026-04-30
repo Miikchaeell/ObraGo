@@ -1,7 +1,7 @@
 {
   "name": "obrascan",
   "private": true,
-  "version": "22.0.1",
+  "version": "22.2.0",
   "type": "module",
   "engines": {
     "node": ">=22.0.0"

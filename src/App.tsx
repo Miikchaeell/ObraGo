@@ -1,4 +1,4 @@
-// [v22.0.1] OBRA GO PRO - DEPLOYMENT TRIGGER: 2026-04-29
+// [v22.2.0] OBRA GO PRO - DARK INDUSTRIAL LUXURY - DEPLOY: 2026-04-30 11:49 AM
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/context/AuthContext";
 import Scanner from "@/pages/Scanner";
