@@ -120,13 +120,13 @@ const generateElitePDF = async (projectName, scanResult, costBreakdown, material
     // FOOTER REFORZADO AEC
     doc.setFontSize(7);
     doc.setTextColor(150, 150, 150);
-    doc.text("ESTE DOCUMENTO ES UNA AUDITORÍA TÉCNICA CERTIFICADA POR EL MOTOR OBRA GO. VALIDEZ DE PRECIOS: 5 DÍAS HÁBILES.", 105, 282, { align: "center" });
+    doc.text("ESTE DOCUMENTO ES UNA AUDITORÍA TÉCNICA CERTIFICADA POR EL MOTOR OBRAGOPRO. VALIDEZ DE PRECIOS: 5 DÍAS HÁBILES.", 105, 282, { align: "center" });
     
     doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
     doc.rect(0, 285, 210, 15, 'F');
     doc.setTextColor(accentColor[0], accentColor[1], accentColor[2]);
     doc.setFontSize(8);
-    doc.text("WWW.OBRAGO.CL - INGENIERÍA CIVIL AEC-CHILE V22.0", 105, 294, { align: "center", charSpace: 1 });
+    doc.text("WWW.OBRAGOPRO.CL - INGENIERÍA CIVIL AEC-CHILE V22.1", 105, 294, { align: "center", charSpace: 1 });
 
     doc.save(`Reporte_Elite_AEC_${projectName || 'Obra'}.pdf`);
   } catch (e) { console.error("Error generando PDF Elite:", e); }
@@ -254,7 +254,7 @@ export default function Scanner() {
   };
 
   const handleWhatsAppShare = () => {
-    const msg = encodeURIComponent(`🚀 REPORTE AEC-CHILE\nProyecto: ${name}\nTotal: $${costBreakdown.total.toLocaleString('es-CL')}\nValidado por ObraGo Senior.`);
+    const msg = encodeURIComponent(`🚀 REPORTE AEC-CHILE\nProyecto: ${name}\nTotal: $${costBreakdown.total.toLocaleString('es-CL')}\nValidado por ObraGoPRO.`);
     window.open(`https://wa.me/?text=${msg}`, '_blank');
   };
 
@@ -287,7 +287,7 @@ export default function Scanner() {
     <div className="min-h-screen bg-[#0F1115] text-white max-w-lg mx-auto flex flex-col font-sans">
       <nav className="p-4 border-b border-white/10 flex justify-between items-center glass-card sticky top-0 z-50">
         <button onClick={() => navigate(-1)} className="p-2 hover:bg-white/5 rounded-full"><ChevronLeft /></button>
-        <h1 className="text-xs font-black uppercase tracking-[0.2em] gold-gradient-text">Obra Go Senior</h1>
+        <h1 className="text-xs font-black uppercase tracking-[0.2em] gold-gradient-text">ObraGoPRO</h1>
         <button onClick={() => setStep('config')} className="p-2 hover:bg-white/5 rounded-full"><RotateCcw /></button>
       </nav>
 
@@ -471,7 +471,7 @@ export default function Scanner() {
       )}
       
       <footer className="p-8 text-center border-t border-white/5 opacity-30">
-        <p className="text-[8px] font-black uppercase tracking-[0.5em]">Obra Go Senior v21.1 AEC-CHILE MASTER</p>
+        <p className="text-[8px] font-black uppercase tracking-[0.5em]">ObraGoPRO v22.1 AEC-CHILE MASTER</p>
       </footer>
     </div>
   );

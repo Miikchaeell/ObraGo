@@ -68,7 +68,7 @@ export default function Index() {
               transition={{ delay: 0.2 }}
               className="flex flex-col items-start gap-2"
             >
-              <img src="/obra-go-branding-2026.png" className="w-48 h-auto drop-shadow-2xl brightness-110" alt="ObraGo Logo" />
+              <img src="/logo-full.svg" className="w-48 h-auto drop-shadow-2xl brightness-110" alt="ObraGoPRO Logo" />
             </motion.div>
           </div>
         </section>
@@ -82,7 +82,7 @@ export default function Index() {
                 <img src="/obra-go-branding-2026.png" className="w-full h-full object-contain" alt="ObraGo" />
               </div>
               <div>
-                <img src="/obra-go-branding-2026.png" className="h-4 w-auto object-contain brightness-0 contrast-200" alt="ObraGo" />
+                <img src="/logo-full.svg" className="h-4 w-auto object-contain brightness-0 contrast-200" alt="ObraGoPRO" />
                 <div className="flex flex-col">
                   <span className="text-[10px] font-bold text-muted-foreground uppercase truncate w-32">{user?.email}</span>
                   <div 
