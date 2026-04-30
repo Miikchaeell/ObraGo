@@ -35,7 +35,7 @@ const sectors = [
   { icon: "💧", name: "Hidráulica", desc: "Supervisión de plantas de tratamiento, embalses y redes de distribución." },
   { icon: "🏭", name: "Plantas", desc: "Montaje mecánico de precisión y control documental de paradas de planta." },
   { icon: "🏥", name: "Infra. Pública", desc: "Gestión de contratos complejos y cumplimiento de normativas gubernamentales." },
-  { icon: "⛰️", name: "Agroindustria", desc: "Construcción de centros de distribución y cámaras de frío con control de stock." }
+  { icon: "🚜", name: "Agroindustria", desc: "Construcción de centros de distribución y cámaras de frío con control de stock." }
 ];
 
 const modules = [

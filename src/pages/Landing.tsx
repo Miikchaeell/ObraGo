@@ -59,7 +59,7 @@ export default function Landing() {
             playsInline
             className="absolute inset-0 w-full h-full object-cover opacity-40 grayscale"
           >
-            <source src="/videos/Michael.mp4" type="video/mp4" />
+            <source src="/videos/hero-obragopro.mp4" type="video/mp4" />
           </video>
           <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black z-10" />
           <div className="absolute inset-0 backdrop-blur-[2px] z-5" />
