@@ -5,7 +5,7 @@ import { X, Send, ShieldCheck, Camera } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 /**
- * SISTEMA DINÁMICO DE VIDEO-AGENTES - OBRA GO V9.5
+ * SISTEMA DINÁMICO DE VIDEO-AGENTES - OBRAGOPRO V22.1
  * REINGENIERÍA DE PRODUCCIÓN: Michael, Cristopher, Danitza, Ricardo, David
  */
 
@@ -28,7 +28,7 @@ export const SupportWidget = () => {
   const [history, setHistory] = useState([
     {
       role: 'assistant',
-      content: `¡Hola! Soy Michael de Obra Go. Ya validé tu presupuesto de $${Number(lastTotal).toLocaleString('es-CL')}. ¿Te ayudo con el APU o prefieres bajar el Reporte Élite por $2.990 ahora?`
+      content: `¡Hola! Soy Michael de ObraGoPro. Ya validé tu presupuesto de $${Number(lastTotal).toLocaleString('es-CL')}. ¿Te ayudo con el APU o prefieres bajar el Reporte Élite por $9.990 ahora?`
     }
   ]);
   const [isTyping, setIsTyping] = useState(false);
@@ -44,7 +44,7 @@ export const SupportWidget = () => {
         setHistory(prev => [
             {
                 role: 'assistant',
-                content: `¡Hola! Soy Michael de Obra Go. Ya validé tu presupuesto de $${Number(newTotal).toLocaleString('es-CL')}. ¿Te ayudo con el APU o prefieres bajar el Reporte Élite por $2.990 ahora?`
+                content: `¡Hola! Soy Michael de ObraGoPro. Ya validé tu presupuesto de $${Number(newTotal).toLocaleString('es-CL')}. ¿Te ayudo con el APU o prefieres bajar el Reporte Élite por $9.990 ahora?`
             },
             ...prev.slice(1)
         ]);
@@ -162,7 +162,7 @@ export const SupportWidget = () => {
                         onClick={() => window.location.href='/scanner'}
                         className="mt-4 w-full py-3 bg-[#D4AF37] text-black font-black text-[10px] uppercase tracking-widest rounded-xl hover:scale-105 transition-all shadow-xl shadow-[#D4AF37]/20 flex items-center justify-center gap-2"
                       >
-                        <ShieldCheck className="w-3 h-3" /> Pagar $2.990 y resolver todas mis dudas
+                        <ShieldCheck className="w-3 h-3" /> Pagar $9.990 y resolver todas mis dudas
                       </button>
                     )}
                   </div>

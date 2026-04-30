@@ -148,7 +148,7 @@ export default function Scanner() {
     if (!costBreakdown || !materials || !scanResult) return;
     
     const wsData = [
-      ["PRESUPUESTO ÉLITE AEC - OBRA GO"],
+      ["PRESUPUESTO ÉLITE AEC - OBRAGOPRO"],
       ["Proyecto:", name || 'Obra Sin Nombre'],
       ["Partida:", scanResult.partida || 'N/A'],
       [""],

@@ -1,7 +1,7 @@
 {
-  "name": "ObraGo Pro - Inteligencia AEC",
-  "short_name": "ObraGo Pro",
-  "description": "IA para cubicación y auditoría técnica de ingeniería en terreno.",
+  "name": "ObraGoPro - Inteligencia AEC",
+  "short_name": "ObraGoPro",
+  "description": "IA Nexus para cubicación y auditoría técnica de ingeniería en terreno.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#000000",
