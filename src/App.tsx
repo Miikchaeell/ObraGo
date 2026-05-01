@@ -1,4 +1,4 @@
-// [v22.2.1] OBRA GO PRO - DARK INDUSTRIAL LUXURY - DEPLOY: 2026-04-30 12:15 PM - CACHE PURGE REQ
+// [v22.3.0] OBRA GO PRO - INFRASTRUCTURE SAAS - DEPLOY: 2026-05-01 07:55 AM
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/context/AuthContext";
 import Scanner from "@/pages/Scanner";

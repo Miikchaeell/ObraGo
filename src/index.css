@@ -12,6 +12,10 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-family: 'Inter', sans-serif;
+  background-image: 
+    linear-gradient(rgba(212, 175, 55, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(212, 175, 55, 0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
 }
 
 /* Hyper-Glassmorphism Overhaul */
@@ -38,26 +42,50 @@ body {
   color: transparent;
 }
 
-.premium-button {
+.glow-button {
   position: relative;
-  overflow: hidden;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   background: var(--gold);
   color: #080808;
-  border: none;
-  cursor: pointer;
   font-weight: 900;
   text-transform: uppercase;
   letter-spacing: 0.1em;
+  box-shadow: 0 0 20px rgba(212, 175, 55, 0.4);
+  transition: all 0.3s ease;
 }
 
-.premium-button:hover {
-  filter: brightness(1.1);
-  letter-spacing: 0.15em;
+.glow-button:hover {
+  box-shadow: 0 0 40px rgba(212, 175, 55, 0.6);
+  transform: translateY(-2px);
 }
 
-.premium-button:active {
-  transform: scale(0.98);
+.border-beam {
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.border-beam::after {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0%,
+    transparent 40%,
+    var(--gold) 50%,
+    transparent 60%,
+    transparent 100%
+  );
+  animation: border-beam-rotate 4s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes border-beam-rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .flat-panel {
